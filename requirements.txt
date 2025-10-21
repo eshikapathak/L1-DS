@@ -1,0 +1,16 @@
+h5py
+typing-extensions
+git+https://github.com/justagist/pylasadataset
+jax==0.4.30
+jaxlib
+equinox
+diffrax
+optax
+numpy
+scipy
+matplotlib
+scikit-learn
+fastdtw
+dtaidistance
+pyyaml
+cvxpy

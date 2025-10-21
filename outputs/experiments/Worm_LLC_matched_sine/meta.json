@@ -1,0 +1,13 @@
+{
+  "model": "outputs/Worm/order1_w100_d3_ntr4_ns1000_curr200_lr0.0005_seed1385/Worm_NODE_w100_d3_ntr4_ns1000.eqx",
+  "order": 1,
+  "width": 100,
+  "depth": 3,
+  "train_yaml": "configs/Worm/node_train.yaml",
+  "shape": "Worm",
+  "nsamples": 1000,
+  "ntrain": 4,
+  "demo_ref": "NODE rollout from same init",
+  "dtw_ref": "average of training demos",
+  "disturbance": "mid-interval rectangular pulse (mag=2.0, width=0.30)"
+}
