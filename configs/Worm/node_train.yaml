@@ -19,4 +19,5 @@ print_every: 100
 save_every: 1000
 
 # output
-out_root: outputs
+out_root: auto_run/models
+#outputs

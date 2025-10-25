@@ -1,0 +1,33 @@
+{
+  "model": "auto_run/models/Snake/order1_w100_d3_ntr4_ns1000_curr200_lr0.0005_seed1385/Snake_NODE_w100_d3_ntr4_ns1000.eqx",
+  "order": 1,
+  "width": 100,
+  "depth": 3,
+  "train_yaml": "configs/Snake/node_train.yaml",
+  "shape": "Snake",
+  "nsamples": 1000,
+  "ntrain": 4,
+  "demo_ref": "NODE rollout from average-demo init",
+  "dtw_ref": "average of training demos",
+  "condition": {
+    "with_llc": true,
+    "disturbance_mode": "unmatched",
+    "matched": false,
+    "unmatched": true,
+    "matched_type": "sine",
+    "unmatched_type": "sine"
+  },
+  "outputs": {
+    "fig": "auto_run/outputs/expts/Snake/with_llc_unmatched_sine/fig_Snake_with_llc_unmatched-sine.png",
+    "chart": "auto_run/outputs/expts/Snake/with_llc_unmatched_sine/chart_Snake_with_llc_unmatched-sine_dtw_avg.png",
+    "logs": [
+      "Snake_with_llc_unmatched-sine_NODE.npz",
+      "Snake_with_llc_unmatched-sine_NODE_CLF.npz",
+      "Snake_with_llc_unmatched-sine_NODE_CLF_L1.npz"
+    ]
+  },
+  "references": {
+    "avg_demo": "auto_run/outputs/expts/Snake/with_llc_unmatched_sine/Snake_avg_demo.npz",
+    "node_ref": "auto_run/outputs/expts/Snake/with_llc_unmatched_sine/Snake_node_ref_from_avg_init.npz"
+  }
+}

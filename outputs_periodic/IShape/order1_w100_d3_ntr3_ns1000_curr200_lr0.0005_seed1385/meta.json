@@ -1,0 +1,20 @@
+{
+  "shape": "IShape",
+  "nsamples": 1000,
+  "ntrain": 3,
+  "seed": 1385,
+  "width": 100,
+  "depth": 3,
+  "order": 1,
+  "steps": 5000,
+  "batch_size": 2,
+  "base_lr": 0.0005,
+  "curriculum_steps": 200,
+  "seconds": 79.18969297409058,
+  "files": {
+    "model": "outputs_periodic/IShape/order1_w100_d3_ntr3_ns1000_curr200_lr0.0005_seed1385/IShape_NODE_w100_d3_ntr3_ns1000.eqx",
+    "loss_curve": "outputs_periodic/IShape/order1_w100_d3_ntr3_ns1000_curr200_lr0.0005_seed1385/loss_curve.png",
+    "preview": "outputs_periodic/IShape/order1_w100_d3_ntr3_ns1000_curr200_lr0.0005_seed1385/train_overlay_step{step}.png",
+    "arrays": "outputs_periodic/IShape/order1_w100_d3_ntr3_ns1000_curr200_lr0.0005_seed1385/train_preview.npz"
+  }
+}

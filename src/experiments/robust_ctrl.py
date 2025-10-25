@@ -2,7 +2,7 @@ from __future__ import annotations
 import numpy as np
 from scipy.linalg import expm
 
-def clf_qp(x, x_ref, f_x, f_ref, alpha_h=4.0, lambda_v=10.0):
+def clf_qp(x, x_ref, f_x, f_ref, alpha_h=15.0, lambda_v=10.0):
     """
     Min ||v||^2 + λ·relu(Gv−h)  s.t.  Gv ≤ h
     with G=2(x−x_ref)^T,  h = −2(x−x_ref)^T(f_x−f_ref) − α||x−x_ref||^2

@@ -52,3 +52,83 @@ python -m src.experiments.run_experiments \
   --matched --matched_type sine \
   --unmatched --unmatched_type pulse \
   --verbose
+
+  Non-LLC (direct mid-pulse disturbance)
+python -m src.experiments.run_experiments \
+  --train_yaml configs/Worm/node_train.yaml \
+  --out outputs/experiments/Worm_noLLC_midpulse \
+  --verbose
+
+LLC ON — No disturbance
+python -m src.experiments.run_experiments \
+  --train_yaml configs/Worm/node_train.yaml \
+  --out outputs/experiments/Worm_LLC_none \
+  --with_llc \
+  --verbose
+
+LLC ON — Matched (sine)
+python -m src.experiments.run_experiments \
+  --train_yaml configs/Worm/node_train.yaml \
+  --out outputs/experiments/Worm_LLC_matched_sine \
+  --with_llc \
+  --matched --matched_type sine \
+  --verbose
+
+LLC ON — Unmatched (pulse)
+python -m src.experiments.run_experiments \
+  --train_yaml configs/Worm/node_train.yaml \
+  --out outputs/experiments/Worm_LLC_unmatched_pulse \
+  --with_llc \
+  --unmatched --unmatched_type pulse \
+  --verbose
+
+LLC ON — Both matched & unmatched (e.g., matched=pulse, unmatched=const)
+python -m src.experiments.run_experiments \
+  --train_yaml configs/Worm/node_train.yaml \
+  --out outputs/experiments/Worm_LLC_both \
+  --with_llc \
+  --matched --matched_type pulse \
+  --unmatched --unmatched_type const \
+  --verbose
+
+
+Swap configs/Worm/node_train.yaml for another shape’s YAML (e.g., configs/CShape/node_train.yaml) and change the --out folder name accordingly.
+
+
+Non-LLC (direct mid-pulse)
+python -m src.experiments.run_experiments \
+  --train_yaml configs/CShape/node_train.yaml \
+  --out outputs/experiments/CShape_noLLC_midpulse \
+  --verbose
+
+LLC ON — No disturbance
+python -m src.experiments.run_experiments \
+  --train_yaml configs/CShape/node_train.yaml \
+  --out outputs/experiments/CShape_LLC_none \
+  --with_llc \
+  --verbose
+
+LLC ON — Matched (sine)
+python -m src.experiments.run_experiments \
+  --train_yaml configs/CShape/node_train.yaml \
+  --out outputs/experiments/CShape_LLC_matched_sine \
+  --with_llc \
+  --matched --matched_type sine \
+  --verbose
+
+LLC ON — Unmatched (pulse)
+python -m src.experiments.run_experiments \
+  --train_yaml configs/CShape/node_train.yaml \
+  --out outputs/experiments/CShape_LLC_unmatched_pulse \
+  --with_llc \
+  --unmatched --unmatched_type pulse \
+  --verbose
+
+LLC ON — Both matched & unmatched (example types)
+python -m src.experiments.run_experiments \
+  --train_yaml configs/CShape/node_train.yaml \
+  --out outputs/experiments/CShape_LLC_both \
+  --with_llc \
+  --matched --matched_type pulse \
+  --unmatched --unmatched_type const \
+  --verbose

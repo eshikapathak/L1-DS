@@ -1,0 +1,22 @@
+{
+  "shape": "Angle",
+  "nsamples": 1000,
+  "ntrain": 4,
+  "width": 100,
+  "depth": 3,
+  "steps": 10000,
+  "batch_size": 2,
+  "base_lr": 0.0005,
+  "curriculum_steps": 200,
+  "seed": 1385,
+  "order": 1,
+  "lambda_vel": 0.0,
+  "t_len": 1000,
+  "dt_nominal": 0.002968502735264841,
+  "files": {
+    "model": "auto_run/models/Angle/order1_w100_d3_ntr4_ns1000_curr200_lr0.0005_seed1385/Angle_NODE_w100_d3_ntr4_ns1000.eqx",
+    "loss": "auto_run/models/Angle/order1_w100_d3_ntr4_ns1000_curr200_lr0.0005_seed1385/loss_curve.png",
+    "overlay_train": "auto_run/models/Angle/order1_w100_d3_ntr4_ns1000_curr200_lr0.0005_seed1385/train_overlay_step10000.png",
+    "vel_overlay": null
+  }
+}

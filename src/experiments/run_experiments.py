@@ -1,3 +1,4 @@
+# src/experiments/run_experiments.py
 from __future__ import annotations
 import argparse, json, time
 from pathlib import Path
@@ -7,9 +8,9 @@ import equinox as eqx
 
 from models.neural_ode import NeuralODE
 from src.data.lasa import load_shape, resample
-from .targets import TargetDTW
+from .targets import TargetDTW, TargetLeastEffort
 from .robust_ctrl import L1Adaptive
-from .disturbances import big_mid_pulse
+from .disturbances import big_mid_pulse, two_mid_pulses   # direct disturbance (no_llc only)
 from .simulator import SimConfig, simulate
 from .metrics_plots import dtw_distance, plot_all_together_with_dist, bar_with_ci
 
@@ -52,8 +53,6 @@ def expected_model_path(cfg: dict) -> Path:
     if not eqx_files: raise FileNotFoundError(f"No .eqx found under: {run_dir}")
     return eqx_files[0]
 
-
-# ------------------------ build a NODE reference (pos/vel) ------------------------
 def rollout_node_reference(model, z0: np.ndarray, t_grid: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Discrete Euler rollout of NODE: z_{k+1}=z_k + dt * f(z_k). Returns (pos, vel_hat)."""
     t = np.asarray(t_grid).reshape(-1)
@@ -69,6 +68,46 @@ def rollout_node_reference(model, z0: np.ndarray, t_grid: np.ndarray) -> tuple[n
     return Z, Vh
 
 
+# ------------------------ label builders ------------------------
+def _condition_tags(args) -> dict:
+    """Return tags/strings for filenames and titles based on LLC + disturbance flags."""
+    with_llc = bool(args.with_llc)
+    mode_tag = "with_llc" if with_llc else "no_llc"
+    mode_title = "LLC" if with_llc else "No LLC"
+
+    if with_llc:
+        if args.matched and args.unmatched:
+            dist_mode = "matched+unmatched"
+            dist_tag = f"matched-{args.matched_type}_unmatched-{args.unmatched_type}"
+            dist_title = f"Matched ({args.matched_type}) + Unmatched ({args.unmatched_type})"
+        elif args.matched:
+            dist_mode = "matched"
+            dist_tag = f"matched-{args.matched_type}"
+            dist_title = f"Matched ({args.matched_type})"
+        elif args.unmatched:
+            dist_mode = "unmatched"
+            dist_tag = f"unmatched-{args.unmatched_type}"
+            dist_title = f"Unmatched ({args.unmatched_type})"
+        else:
+            dist_mode = "none"
+            dist_tag = "none"
+            dist_title = "No disturbance"
+    else:
+        # direct disturbance path (we currently use mid-pulse)
+        dist_mode = "direct"
+        dist_tag = "direct-midpulse"
+        dist_title = "Direct disturbance (mid-pulse)"
+
+    base_tag = f"{mode_tag}_{dist_tag}"
+    title = f"{mode_title} — Disturbance: {dist_title}"
+    return dict(
+        mode_tag=mode_tag, mode_title=mode_title,
+        dist_mode=dist_mode, dist_tag=dist_tag, dist_title=dist_title,
+        base_tag=base_tag,
+        fig_title=title
+    )
+
+
 # ------------------------ main ------------------------
 def main():
     ap = argparse.ArgumentParser()
@@ -76,8 +115,17 @@ def main():
     ap.add_argument("--model", type=str, default=None, help="Optional: explicit .eqx path")
     ap.add_argument("--out", type=str, default="outputs/experiments/Worm_suite")
     ap.add_argument("--verbose", action="store_true")
+    ap.add_argument(
+        "--selector",
+        type=str,
+        default="dtw",
+        choices=["dtw", "least_effort"],
+        help="Target selection policy. Default=dtw."
+    )
+
+    # plant/LLC flags
     ap.add_argument("--with_llc", action="store_true",
-                help="Use plant + PD low-level controller (LLC) instead of direct/no_llc mode.")
+                    help="Use plant + PD low-level controller (LLC) instead of direct/no_llc mode.")
     ap.add_argument("--matched", action="store_true",
                     help="Enable matched lower-level disturbance (acts on acceleration).")
     ap.add_argument("--unmatched", action="store_true",
@@ -106,48 +154,77 @@ def main():
     lasa = load_shape(shape)
     nsamples = int(cfg_tr.get("nsamples", 1000))
     ntrain = int(cfg_tr.get("ntrain", 4))
-    pos_rs, vel_rs, t_rs = resample(lasa, nsamples=nsamples)  # lists of arrays, same length / time grid
+    pos_rs, vel_rs, _ = resample(lasa, nsamples=nsamples)
 
-        # --- choose training demos indices: match your earlier convention [1:ntrain]
+    # --- training subset & average demo
     train_idxs = list(range(1, ntrain)) if ntrain > 1 else [0]
-
-    # --- average training demos (paper curve + DTW reference)
     demo_avg_pos = np.mean([pos_rs[i] for i in train_idxs], axis=0)   # (N,2)
     demo_avg_vel = np.mean([vel_rs[i] for i in train_idxs], axis=0)   # (N,2)
-
-    # --- time grid from the averaged demo length (normalized to [0,1])
     demo_t = np.linspace(0.0, 1.0, demo_avg_pos.shape[0], dtype=float)
 
-    # --- initial condition = first sample of the average demo
-    init_state = np.hstack([demo_avg_pos[0], demo_avg_vel[0]])        # [px0,py0,vx0,vy0]
+    # --- initial condition from the average demo
+    init_state = np.hstack([demo_avg_pos[0], demo_avg_vel[0]])
 
-    # --- CLF reference must come from a NODE rollout from the *same averaged init*
-    node_ref_pos, node_ref_vel = rollout_node_reference(
-        model,
-        z0=demo_avg_pos[0],  # same avg init point
-        t_grid=demo_t
-    )
+    # --- NODE rollout reference for CLF/L1
+    node_ref_pos, node_ref_vel = rollout_node_reference(model, demo_avg_pos[0], demo_t)
 
-    # ---- selector factories use NODE reference (not raw LASA) and same avg init
+    # --- SAVE references
+    avg_demo_path = out_dir / f"{shape}_avg_demo.npz"
+    np.savez_compressed(avg_demo_path, pos=demo_avg_pos, vel=demo_avg_vel, t=demo_t)
+
+    node_ref_path = out_dir / f"{shape}_node_ref_from_avg_init.npz"
+    np.savez_compressed(node_ref_path, pos=node_ref_pos, vel=node_ref_vel, t=demo_t)
+
+    log(f"Saved references: {avg_demo_path.name}, {node_ref_path.name}", enabled=args.verbose)
+
+    # ---- selector factories (DTW default; Least-Effort optional)
+    selector_kind = args.selector.lower()  # "dtw" or "least_effort"
+
     class _SelWrap:
-        def __init__(self, dt):
-            self.sel = TargetDTW(node_ref_pos, node_ref_vel, W=50, H=40)
-            self.sel.init_from(node_ref_pos[0])                # init on NODE ref
-            self.l1 = L1Adaptive(Ts=dt, a=10.0, omega=12.0, x0=node_ref_pos[0])
-        def get(self, hist): return self.sel.get(hist)
+        def __init__(self, dt: float):
+            self.dt = float(dt)
+            if selector_kind == "least_effort":
+                # Build least-effort selector from the learned model directly.
+                # Use same init as NODE ref for consistency.
+                self.sel = TargetLeastEffort(
+                    model=model,
+                    dt=self.dt,
+                    t_span=float(demo_t[-1] - demo_t[0]),   # normalized to 1.0
+                    lookahead_N=35,
+                    y0_seed=node_ref_pos[0],
+                    wrap=False
+                )
+            else:
+                # Default: DTW on the NODE reference
+                self.sel = TargetDTW(node_ref_pos, node_ref_vel, W=50, H=40)
+                self.sel.init_from(node_ref_pos[0])
 
-    def selector_with_l1(dt): return _SelWrap(dt)
-    def selector_no_l1(dt):
+            # L1 at the same (outer) dt
+            self.l1 = L1Adaptive(Ts=self.dt, a=10.0, omega=20.0, x0=node_ref_pos[0])
+
+        def get(self, inp):
+            # simulate() passes history (DTW) or current pos (Least-Effort)
+            if selector_kind == "least_effort":
+                if isinstance(inp, (list, tuple)):
+                    x = np.asarray(inp[-1], dtype=float)
+                else:
+                    x = np.asarray(inp, dtype=float)
+                return self.sel.get(x)
+            else:
+                return self.sel.get(inp)
+
+    def selector_with_l1(dt: float): return _SelWrap(dt)
+    def selector_no_l1(dt: float):
         s = _SelWrap(dt)
-        delattr(s, "l1")
+        if hasattr(s, "l1"):
+            delattr(s, "l1")
         return s
-
 
     # ---- vector field function
     def field_fn(p_xy: np.ndarray):
         return np.array(model.func(0.0, jnp.asarray(p_xy), None))
 
-    # ---- pretty bounds around the average demo
+    # ---- plot bounds around average demo
     x_range = float(np.ptp(demo_avg_pos[:, 0])); y_range = float(np.ptp(demo_avg_pos[:, 1]))
     pad = 0.15 * max(x_range, y_range) if max(x_range, y_range) > 0 else 0.1
     bounds = (
@@ -155,76 +232,97 @@ def main():
         (float(np.min(demo_avg_pos[:, 1])) - pad, float(np.max(demo_avg_pos[:, 1])) + pad),
     )
 
-    # --- BIG mid pulse disturbance (from disturbances.py)
-    d_fn = big_mid_pulse(center=0.5, width=0.30, mag=30.0, ax_gain=(1.0, 0.8))
-    dist_desc = "Lower-level disturbance: mid-interval rectangular pulse (mag 2.0, width 30%)"
-    log(f"Disturbance: {dist_desc}", enabled=args.verbose)
+    # ---- condition tags & titles
+    tags = _condition_tags(args)
+    sel_tag = "sel-dtw" if selector_kind == "dtw" else "sel-le"
+    log(f"Condition: {tags['fig_title']}", enabled=args.verbose)
 
-    # ---- simulate 3 controllers with auto time base from demo_t
+    # ---- direct disturbance for no_llc (ignored when with_llc)
+    d_fn = None
+    if tags["mode_tag"] == "no_llc":
+        d_fn = two_mid_pulses(
+            center1=0.30, width1=0.20, mag1=40.0, ax_gain1=(1.0, -1.0),
+            center2=0.80, width2=0.50, mag2=50.0, ax_gain2=(1.0,  1.0),
+        )
+
+    # ---- simulate all controllers
     controllers = [
-        ("NODE",       dict(use_clf=False, use_l1=False), selector_no_l1),
-        ("NODE+CLF",   dict(use_clf=True,  use_l1=False), selector_no_l1),
-        ("NODE+CLF+L1",dict(use_clf=True,  use_l1=True ), selector_with_l1),
+        ("NODE",         dict(use_clf=False, use_l1=False), selector_no_l1),
+        ("NODE+CLF",     dict(use_clf=True,  use_l1=False), selector_no_l1),
+        ("NODE+CLF+L1",  dict(use_clf=True,  use_l1=True ), selector_with_l1),
     ]
 
     cols = []
-    names=[]; dtw_vals=[]
+    names, dtw_vals = [], []
     last_logs = None
+
     for i, (name, flags, sel_factory) in enumerate(controllers, start=1):
         log(f"[{i}/{len(controllers)}] Running controller: {name}", enabled=args.verbose)
 
-        # cfg = SimConfig(dt=None, T=None, target_mode="dtw", no_llc=True,
-        #                 use_clf=flags["use_clf"], use_l1=flags["use_l1"])
+        target_mode = "dtw" if selector_kind == "dtw" else "least_effort"
+
         cfg = SimConfig(
-            dt=None, T=None, target_mode="dtw",
-            no_llc=not args.with_llc,
+            dt=None, T=None, target_mode=target_mode,
+            no_llc=(tags["mode_tag"] == "no_llc"),
             use_clf=flags["use_clf"], use_l1=flags["use_l1"],
             matched=args.matched, unmatched=args.unmatched,
             matched_type=args.matched_type, unmatched_type=args.unmatched_type,
         )
 
-
-        npz_name = f"{shape}_no_llc_midpulse_{name.replace('+','_')}.npz"
+        base = f"{shape}_{tags['base_tag']}_{sel_tag}"
+        npz_name = f"{base}_{name.replace('+','_')}.npz"
         npz_path = out_dir / npz_name
 
         t0 = time.time()
-        logs = simulate(model, None, lambda: sel_factory(dt=float(1.0/(len(demo_t)-1))),
-                        cfg, init_state, order=order,
-                        direct_dist_fn=d_fn,
-                        save_npz_path=str(npz_path),
-                        t_grid=demo_t)
+        logs = simulate(
+            model, None, lambda: sel_factory(dt=float(1.0/(len(demo_t)-1))),
+            cfg, init_state, order=order,
+            direct_dist_fn=d_fn,
+            save_npz_path=str(npz_path),
+            t_grid=demo_t
+        )
         elapsed = time.time() - t0
 
         cols.append((logs["z"], name))
-        # DTW vs average training demo (your request)
-        d = dtw_distance(logs["z"], demo_avg_pos)
+        d = dtw_distance(logs["z"], demo_avg_pos)  # DTW vs average training demo
         names.append(name); dtw_vals.append(d)
-        last_logs = logs  # to capture t_norm and d_direct for the plot below
+        last_logs = logs
 
         log(f"Saved: {npz_path.name} | steps={len(logs['t'])} | DTW(avg demo)={d:.3f} | elapsed={elapsed:.2f}s",
             enabled=args.verbose)
 
-    # ---- single figure: all controllers + disturbance subplot
-    fig_title = f"{shape} – Tracking under Mid-Interval Pulse Disturbance"
-    fig_path = out_dir / f"fig_{shape}_midpulse.png"
+    # ---- figure (overlay + disturbance subplot)
+    fig_title = f"{shape} — {tags['fig_title']} ({'DTW' if selector_kind=='dtw' else 'Least-Effort'} selector)"
+    fig_path = out_dir / f"fig_{shape}_{tags['base_tag']}_{sel_tag}.png"
+
+    ref_curves = [
+        ("NODE ref (from avg init)", node_ref_pos),
+        ("Avg training demo",        demo_avg_pos),
+    ]
+
     plot_all_together_with_dist(
         rollouts=cols,
-        demo=demo_avg_pos,
+        demo=None,
         field_fn=field_fn,
         field_bounds=bounds,
         subtitle=fig_title,
         outpath=fig_path,
         t_norm=last_logs.get("t_norm", None),
         d_direct=last_logs.get("d_direct", None),
+        ref_curves=ref_curves,
+        d_matched=last_logs.get("sigma", None),
+        d_unmatched=last_logs.get("d_p", None),
     )
     log(f"Figure saved: {fig_path}", enabled=args.verbose)
 
-    # ---- bar chart with numeric labels (DTW vs average demo)
-    chart_path = out_dir / f"chart_{shape}_dtw_avg.png"
-    bar_with_ci(names, np.array(dtw_vals), np.zeros_like(dtw_vals),
-                ylabel="DTW(trajectory, avg demo)",
-                title=f"{shape} – Distance to Average Training Demonstration",
-                outpath=chart_path)
+    # ---- DTW chart (numeric labels)
+    chart_path = out_dir / f"chart_{shape}_{tags['base_tag']}_{sel_tag}_dtw_avg.png"
+    bar_with_ci(
+        names, np.array(dtw_vals), np.zeros_like(dtw_vals),
+        ylabel="DTW(trajectory, avg demo)",
+        title=f"{shape} — {tags['fig_title']} ({'DTW' if selector_kind=='dtw' else 'Least-Effort'} selector)",
+        outpath=chart_path
+    )
     log(f"Chart saved:  {chart_path}", enabled=args.verbose)
 
     # ---- meta
@@ -232,13 +330,29 @@ def main():
         model=str(model_path), order=order, width=width, depth=depth,
         train_yaml=args.train_yaml,
         shape=shape, nsamples=nsamples, ntrain=ntrain,
-        demo_ref="NODE rollout from same init",
+        demo_ref="NODE rollout from average-demo init",
         dtw_ref="average of training demos",
-        disturbance="mid-interval rectangular pulse (mag=2.0, width=0.30)",
+        selector=selector_kind,
+        condition=dict(
+            with_llc=(tags["mode_tag"]=="with_llc"),
+            disturbance_mode=tags["dist_mode"],
+            matched=args.matched, unmatched=args.unmatched,
+            matched_type=args.matched_type, unmatched_type=args.unmatched_type,
+        ),
+        outputs=dict(
+            fig=str(fig_path), chart=str(chart_path),
+            logs=[f"{shape}_{tags['base_tag']}_{sel_tag}_{n.replace('+','_')}.npz" for n,_,_ in controllers]
+        )
     )
+
+    meta["references"] = dict(
+        avg_demo=str(avg_demo_path),
+        node_ref=str(node_ref_path),
+    )
+
     with open(out_dir / "meta.json", "w") as f:
         json.dump(meta, f, indent=2)
-    log("All done. See meta.json and .npz logs in the output folder.", enabled=args.verbose)
+    log("Done.", enabled=args.verbose)
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from dataclasses import dataclass
 from typing import Callable, Optional, Tuple
 
-from .plant_llc import ContinuousDoubleIntegrator2D, PDLowLevel
+from .plant_llc import ContinuousDoubleIntegrator2D, PDLowLevel, PIDLowLevel
 from .disturbances import make_matched_fn, make_unmatched_fn
 from .robust_ctrl import clf_qp, L1Adaptive
 
@@ -14,7 +14,8 @@ class SimConfig:
     dt: Optional[float] = None
     T: Optional[float] = None
     Kp: float = 25.0
-    Kd: float = 10.0
+    Kd: float = 30.0
+    Ki: float = 5.0
     target_mode: str = "dtw"          # "dtw"|"least_effort"|"oracle"
     no_llc: bool = True               # LASA non-periodic uses no_llc by default
     matched: bool = False             # only for with_llc
@@ -23,6 +24,7 @@ class SimConfig:
     unmatched_type: str = "sine"
     use_clf: bool = True              # <-- NEW: enable/disable CLF
     use_l1: bool = False
+    llc_substeps: int = 10      # <-- NEW: inner (LLC) steps per outer step
 
 def _infer_dt_T_from_grid(t_grid: np.ndarray) -> tuple[float, float, int]:
     t_grid = np.asarray(t_grid).reshape(-1)
@@ -53,6 +55,7 @@ def simulate(model,
     # ---- time base
     if (cfg.dt is None or cfg.T is None) and (t_grid is not None):
         dt_sim, T_sim, N = _infer_dt_T_from_grid(t_grid)
+        print("dt_sim infered from t_grid", dt_sim)
         t_arr = np.asarray(t_grid).reshape(-1)
         t0 = float(t_arr[0])
         # also keep a normalized time for disturbance shaping: map t_arr->[0,1]
@@ -68,8 +71,24 @@ def simulate(model,
         t_norm = np.linspace(0.0, 1.0, N+1)
 
     # ---- components
-    plant = ContinuousDoubleIntegrator2D(dt_sim)
-    low   = PDLowLevel(cfg.Kp, cfg.Kd)
+    # plant = ContinuousDoubleIntegrator2D(dt_sim)
+    # low   = PIDLowLevel(Kp=10.0, Kd=10.0, Ki=5.0, i_clamp=2.0, u_limit=None) #PDLowLevel(cfg.Kp, cfg.Kd)
+    # sigma_fn = make_matched_fn(cfg.matched, cfg.matched_type)
+    # dp_fn    = make_unmatched_fn(cfg.unmatched, cfg.unmatched_type)
+    # s = init_state.astype(float)  # [px,py,vx,vy]
+
+    # ---- inner-step config
+    M = int(max(1, getattr(cfg, "llc_substeps", 1)))
+    dt_llc = float(dt_sim / M)
+    print("dt_llc", dt_llc)
+
+    # ---- components
+    # Use inner dt for plant if we’re substepping
+    plant = ContinuousDoubleIntegrator2D(dt_llc if M > 1 else dt_sim)
+
+    # PID gains from cfg; adjust as needed for higher inner rate
+    low = PIDLowLevel(Kp=cfg.Kp, Kd=cfg.Kd, Ki=cfg.Ki, i_clamp=2.0, u_limit=None)
+
     sigma_fn = make_matched_fn(cfg.matched, cfg.matched_type)
     dp_fn    = make_unmatched_fn(cfg.unmatched, cfg.unmatched_type)
 
@@ -88,23 +107,20 @@ def simulate(model,
         z_true, v_true = s[:2], s[2:]
         hist.append(z_true.copy()); hist = hist[-40:]
 
-        # reference
+        # ---- Outer-loop reference/commands (once per outer step)
         if cfg.target_mode == "oracle" and f_oracle is not None:
             z_ref, v_ref_t, _ = f_oracle(t)
         else:
             z_ref, v_ref_t = selector.get(np.array(hist, dtype=float) if cfg.target_mode=="dtw" else z_true)
 
-        # learned drift
-        if order == 1:
-            v_hat = np.array(model.func(0.0, jnp.asarray(z_true), None))
-        else:
-            v_hat = v_true.copy()
-
+        # Learned drift and high-level control (once per outer step)
+        v_hat = np.array(model.func(0.0, jnp.asarray(z_true), None)) if (order == 1) else v_true.copy()
         v_nom = clf_qp(x=z_true, x_ref=z_ref, f_x=v_hat, f_ref=v_ref_t) if cfg.use_clf else np.zeros(2)
-        va = selector.l1.update(x_true=z_true, f_ref=v_hat, v_nom=v_nom) if hasattr(selector, "l1") else np.zeros(2)
+        va    = selector.l1.update(x_true=z_true, f_ref=v_hat, v_nom=v_nom) if hasattr(selector, "l1") else np.zeros(2)
         v_cmd = v_hat + v_nom + va
 
         if cfg.no_llc:
+            # (unchanged) direct discrete kinematics path
             d = np.zeros(2) if direct_dist_fn is None else direct_dist_fn(float(t_norm[k]))
             v_next = v_cmd + d
             p_next = z_true + dt_sim * v_next
@@ -112,14 +128,18 @@ def simulate(model,
             t = float(t_arr[k+1])
             Ddir.append(d.copy())
         else:
-            u = low(z_ref, v_cmd, z_true, v_true)
-            t, s = plant.step(t, s, u_k=u, sigma_m_fn=sigma_fn, d_p_fn=dp_fn)
-            Ddir.append(np.zeros(2))
+            # ---- WITH LLC: substep the plant/PID M times to reach the next outer time
+            for m in range(M):
+                # hold outer command constant over the inner window [t, t+dt_llc]
+                u = low(z_ref, v_cmd, s[:2], s[2:], dt_llc)
+                t, s = plant.step(t, s, u_k=u, sigma_m_fn=sigma_fn, d_p_fn=dp_fn)
+            Ddir.append(np.zeros(2))  # direct disturbance not used in with_llc mode
 
-        # logs
+        # ---- logs at outer rate
         Z.append(s[:2].copy()); V.append(s[2:].copy())
         Zref.append(np.asarray(z_ref)); Vref_true.append(np.asarray(v_ref_t))
-        Vhat.append(v_hat); Vnom.append(v_nom); Va.append(va); Vref_cmd.append(v_cmd); Tvec.append(t)
+        Vhat.append(v_hat); Vnom.append(v_nom); Va.append(va); Vref_cmd.append(v_cmd)
+        Tvec.append(t)
 
     out = {
         "t": np.array(Tvec, float),

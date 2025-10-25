@@ -1,22 +1,15 @@
-
-shape: CShape                
+shape: CShape
 nsamples: 1000
 ntrain: 4
 seed: 1385
-
-# model
 width: 100
 depth: 3
-order: 1                   # 1 = pos->vel (2D); 2 = [pos,vel]->[vel,acc] (4D)
-lambda_vel: 0.0             # weight on velocity MSE when order=2
-
-# training
+order: 1
+lambda_vel: 0.0
 steps: 20000
 batch_size: 2
-base_lr: 5.0e-4 #8e-4
-curriculum_steps: 200      # first N steps train on ~30% horizon
+base_lr: 5.0e-4
+curriculum_steps: 200
 print_every: 100
 save_every: 1000
-
-# output
-out_root: outputs
+out_root: auto_run/models

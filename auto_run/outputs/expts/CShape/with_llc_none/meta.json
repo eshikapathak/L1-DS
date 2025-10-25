@@ -1,0 +1,33 @@
+{
+  "model": "auto_run/models/CShape/order1_w100_d3_ntr4_ns1000_curr200_lr0.0005_seed1385/CShape_NODE_w100_d3_ntr4_ns1000.eqx",
+  "order": 1,
+  "width": 100,
+  "depth": 3,
+  "train_yaml": "configs/CShape/node_train.yaml",
+  "shape": "CShape",
+  "nsamples": 1000,
+  "ntrain": 4,
+  "demo_ref": "NODE rollout from average-demo init",
+  "dtw_ref": "average of training demos",
+  "condition": {
+    "with_llc": true,
+    "disturbance_mode": "none",
+    "matched": false,
+    "unmatched": false,
+    "matched_type": "sine",
+    "unmatched_type": "sine"
+  },
+  "outputs": {
+    "fig": "auto_run/outputs/expts/CShape/with_llc_none/fig_CShape_with_llc_none.png",
+    "chart": "auto_run/outputs/expts/CShape/with_llc_none/chart_CShape_with_llc_none_dtw_avg.png",
+    "logs": [
+      "CShape_with_llc_none_NODE.npz",
+      "CShape_with_llc_none_NODE_CLF.npz",
+      "CShape_with_llc_none_NODE_CLF_L1.npz"
+    ]
+  },
+  "references": {
+    "avg_demo": "auto_run/outputs/expts/CShape/with_llc_none/CShape_avg_demo.npz",
+    "node_ref": "auto_run/outputs/expts/CShape/with_llc_none/CShape_node_ref_from_avg_init.npz"
+  }
+}

@@ -1,0 +1,22 @@
+shape: RShape
+data_root: iros_dataset
+nsamples: 1000
+ntrain: 4
+seed: 1385
+
+# model
+width: 100
+depth: 3
+order: 1
+
+# training
+steps: 20000
+batch_size: 2
+base_lr: 5.0e-4
+curriculum_steps: 200
+print_every: 100
+save_every: 1000
+
+# output
+out_root: outputs_periodic
+models_root: outputs_periodic/models
