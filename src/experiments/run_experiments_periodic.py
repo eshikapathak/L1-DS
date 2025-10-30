@@ -1,4 +1,12 @@
 from __future__ import annotations
+
+from pathlib import Path
+import sys
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+# now this works:
+from models.neural_ode import NeuralODE
+
+
 import argparse, json, time
 from pathlib import Path
 import numpy as np
@@ -6,12 +14,12 @@ import jax, jax.numpy as jnp
 import equinox as eqx
 
 from models.neural_ode import NeuralODE
-from src.periodic.iros import load_shape, resample
-from .targets import TargetDTW
-from .robust_ctrl import L1Adaptive
-from .disturbances import big_mid_pulse, two_mid_pulses
-from .simulator import SimConfig, simulate
-from .metrics_plots import dtw_distance, plot_all_together_with_dist, bar_with_ci
+from src.train.train_node_periodic import *
+from src.experiments.targets import TargetDTW
+from src.experiments.robust_ctrl import L1Adaptive
+from src.experiments.disturbances import big_mid_pulse, two_mid_pulses
+from src.experiments.simulator import SimConfig, simulate
+from src.experiments.metrics_plots import dtw_distance, plot_all_together_with_dist, bar_with_ci
 
 # ---------- helpers ----------
 def load_yaml(path: str) -> dict:
@@ -72,10 +80,14 @@ def main():
 
     # --- load model via YAML
     cfg_tr = load_yaml(args.train_yaml)
-    model_path = Path(args.model) if args.model else expected_model_path(cfg_tr)
-    order = int(cfg_tr.get("order", 1))
-    width = int(cfg_tr.get("width", 100)); depth = int(cfg_tr.get("depth", 3))
-    nsamples = int(cfg_tr.get("nsamples", 1000)); ntrain = int(cfg_tr.get("ntrain", 4))
+    # model_path = Path(args.model) if args.model else expected_model_path(cfg_tr)
+    # model_path = "outputs_periodic/new_0.4/IShape/segcur_w128_d3_ntr3_ns10000_lr0.0005_seed1234_mixed/IShape_NODE_segcur.eqx"
+    model_path = "outputs_periodic/0.3/IShape/segcur_w128_d3_ntr3_ns10000_lr0.0005_seed1234_mixed/IShape_NODE_segcur.eqx"
+    order = 1 #int(cfg_tr.get("order", 1))
+    width = 128 #int(cfg_tr.get("width", 100)); 
+    depth = 3 #int(cfg_tr.get("depth", 3))
+    nsamples = 10000 #int(cfg_tr.get("nsamples", 1000)); 
+    ntrain = 1 #int(cfg_tr.get("ntrain", 4))
     shape = cfg_tr.get("shape", "IShape")
 
     key = jax.random.PRNGKey(0)
@@ -87,14 +99,17 @@ def main():
     # --- data
     iros = load_shape(shape)
     pos_rs, vel_rs, t_rs = resample(iros, nsamples=nsamples)
+    # print(t_rs)
     train_idxs = list(range(min(ntrain, len(pos_rs))))
     demo_avg_pos = np.mean([pos_rs[i] for i in train_idxs], axis=0)
     demo_avg_vel = np.mean([vel_rs[i] for i in train_idxs], axis=0)
     demo_t = np.linspace(0.0, 1.0, demo_avg_pos.shape[0], dtype=float)
+    # print(len(demo_t))
     init_state = np.hstack([demo_avg_pos[0], demo_avg_vel[0]])
 
     # --- NODE rollout reference (used by CLF/L1 selector)
     node_ref_pos, node_ref_vel = rollout_node_reference(model, demo_avg_pos[0], demo_t)
+    # print(node_ref_pos.shape)
 
     # --- selector factories
     class _SelWrap:
@@ -111,13 +126,14 @@ def main():
     # --- bounds
     xr = float(np.ptp(demo_avg_pos[:,0])); yr = float(np.ptp(demo_avg_pos[:,1]))
     pad = 0.15 * max(xr, yr) if max(xr, yr) > 0 else 0.1
+    # pad = 1
     bounds = ((float(np.min(demo_avg_pos[:,0])-pad), float(np.max(demo_avg_pos[:,0])+pad)),
               (float(np.min(demo_avg_pos[:,1])-pad), float(np.max(demo_avg_pos[:,1])+pad)))
 
     # --- disturbances: direct for no_llc; matched/unmatched for with_llc
     mode_tag = "with_llc" if args.with_llc else "no_llc"
     if not args.with_llc:
-        d_fn = two_mid_pulses(0.3,0.20,30.0,(1.0,1.0), 0.7,0.20,25.0,(1.0,-1.0))
+        d_fn = two_mid_pulses(0.3,0.20,0.0,(1.0,1.0), 0.7,0.20,0.0,(1.0,-1.0))
         dist_title = "Direct: two pulses"
         base_tag = f"no_llc_direct_two_pulses"
     else:

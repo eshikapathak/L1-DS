@@ -178,7 +178,7 @@ def plot_all_together_with_dist(
       - with_llc: use d_matched and/or d_unmatched (vectors) -> plot their norms
     """
     (xmin, xmax), (ymin, ymax) = field_bounds
-    fig = plt.figure(figsize=(6.8, 8.2))
+    fig = plt.figure(figsize=(10, 8.2))
 
     # --- top panel
     ax1 = fig.add_subplot(2, 1, 1)
@@ -212,7 +212,14 @@ def plot_all_together_with_dist(
     ax1.grid(True, alpha=0.25)
     ax1.set_title(subtitle, fontsize=12)
     ax1.set_xlabel("x"); ax1.set_ylabel("y")
-    ax1.legend(loc="best", frameon=True, framealpha=0.9)
+    # ax1.legend(loc="best", frameon=True, framealpha=0.9)
+    ax1.legend(
+    loc='upper center',
+    bbox_to_anchor=(0.5, -0.1),  # (x center relative to axis, y below axis)
+    frameon=True,
+    framealpha=0.9
+    )
+
 
     # --- bottom panel (disturbance)
     ax2 = fig.add_subplot(2, 1, 2)

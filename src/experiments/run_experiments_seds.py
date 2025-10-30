@@ -270,7 +270,7 @@ def main():
 
     # Define the simulation time grid based on resampled data
     # This grid determines the duration and steps for both reference and simulation
-    demo_t = t_rs # Use the time grid from resample (normalized [0, 1])
+    demo_t = 10*t_rs # Use the time grid from resample (normalized [0, 1])
 
     # --- 5. Initial condition for simulation (in MODEL coordinates) ---
     init_pos_model = avg_demo_pos_model[0]
@@ -380,8 +380,8 @@ def main():
     if tags["mode_tag"] == "no_llc":
         log("Setting up direct disturbance (no_llc mode)", enabled=args.verbose)
         d_fn = two_mid_pulses(
-            center1=0.30, width1=0.20, mag1=0.0, ax_gain1=(1.0, -1.0), # Non-zero magnitude
-            center2=0.80, width2=0.50, mag2=00.0, ax_gain2=(1.0,  1.0), # Non-zero magnitude
+            center1=0.30, width1=0.20, mag1=40.0, ax_gain1=(1.0, -1.0), # Non-zero magnitude
+            center2=0.80, width2=0.50, mag2=50.0, ax_gain2=(1.0,  1.0), # Non-zero magnitude
         )
     else: # with_llc mode
         log("LLC mode active. Direct disturbance disabled.", enabled=args.verbose)
