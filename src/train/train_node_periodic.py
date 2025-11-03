@@ -36,26 +36,28 @@ class NeuralODE(eqx.Module):
     def __init__(self, data_size, width_size, depth, *, key):
         self.func = Func(data_size, width_size, depth, key=key)
     def __call__(self, ts, y0):
+        # ts: (L,), y0: (2,)
         sol = diffrax.diffeqsolve(
             diffrax.ODETerm(self.func), diffrax.Tsit5(),
             t0=ts[0], t1=ts[-1], dt0=ts[1] - ts[0], y0=y0,
             stepsize_controller=diffrax.PIDController(rtol=1e-3, atol=1e-6),
             saveat=diffrax.SaveAt(ts=ts),
         )
-        return sol.ys
+        return sol.ys  # (L,2)
 
 # Defaults (repo-root relative)
 DEFAULT_DATA_ROOT = "IROS_dataset"
-DEFAULT_OUT_ROOT  = "iros_outputs_auto_run/models"
+DEFAULT_OUT_ROOT  = "IROS_dataset/iros_outputs_auto_run/models"
 
 # -----------------------
 # IROS dataset utils
 # -----------------------
 def _finite_diff(pos: np.ndarray, t: np.ndarray) -> np.ndarray:
     v = np.zeros_like(pos)
+    # central diffs internal, one-sided ends
     v[1:-1] = (pos[2:] - pos[:-2]) / (t[2:, None] - t[:-2, None])
-    v[0] = pos[1] - pos[0]
-    v[-1] = pos[-1] - pos[-2]
+    v[0] = (pos[1] - pos[0]) / (t[1] - t[0])
+    v[-1] = (pos[-1] - pos[-2]) / (t[-1] - t[-2])
     return v
 
 def get_shape_files(root: str | Path):
@@ -85,6 +87,7 @@ def load_shape(shape: str, root: str | Path = DEFAULT_DATA_ROOT) -> dict:
     return dict(name=shape, demos=demos)
 
 def resample(data: dict, nsamples: int = 2000) -> Tuple[list, list, np.ndarray]:
+    # returns lists pos_rs[k], vel_rs[k] each (nsamples,2) and shared t_new (nsamples,)
     t_new = np.linspace(0.0, 1.0, nsamples, dtype=float)
     pos_rs, vel_rs = [], []
     from scipy import interpolate
@@ -104,7 +107,7 @@ def resample(data: dict, nsamples: int = 2000) -> Tuple[list, list, np.ndarray]:
 def _plot_xy_overlay(ref_xy, pred_xy, outpath: Path, title: str):
     outpath.parent.mkdir(parents=True, exist_ok=True)
     fig, ax = plt.subplots(figsize=(6, 6))
-    ax.plot(ref_xy[:, 0], ref_xy[:, 1], color="red", lw=1.2, label="reference seg")
+    ax.plot(ref_xy[:, 0], ref_xy[:, 1], color="red", lw=1.2, label="reference")
     ax.plot(pred_xy[:, 0], pred_xy[:, 1], lw=2.0, label="NODE rollout")
     ax.scatter([ref_xy[0, 0]], [ref_xy[0, 1]], c="k", s=18, label="start")
     ax.set_aspect("equal"); ax.grid(True, alpha=0.3)
@@ -153,33 +156,52 @@ def compute_starts(T: int, seg_len: int, stride: int):
     if seg_len > T: seg_len = T
     return list(range(0, max(1, T - seg_len + 1), max(1, stride)))
 
-def mixed_window_loader(Xfull: jnp.ndarray, seg_len: int, batch_size: int, key,
-                        hist_starts, curr_starts, alpha: float) -> Iterator[jnp.ndarray]:
+# -----------------------
+# Loaders (yield segments + start indices)
+# -----------------------
+def mixed_window_loader(
+    Xfull: jnp.ndarray,          # (B, T, 2)
+    seg_len: int,
+    batch_size: int,
+    key,
+    hist_starts: List[int],      # accumulated from earlier stages
+    curr_starts: List[int],      # current stage's starts
+    alpha: float                 # prob of sampling from history
+) -> Iterator[Tuple[jnp.ndarray, jnp.ndarray]]:
     B, T, _ = Xfull.shape
     valid_hist = [s for s in hist_starts if s + seg_len <= T]
-    valid_curr = [s for s in curr_starts if s + seg_len <= T] or compute_starts(T, seg_len, max(1, seg_len // 5))
+    valid_curr = [s for s in curr_starts if s + seg_len <= T]
+    if not valid_curr:
+        valid_curr = compute_starts(T, seg_len, stride=max(1, seg_len // 5))
     k = key
     while True:
         use_hist = jr.bernoulli(k, p=jnp.clip(alpha, 0.0, 1.0), shape=(batch_size,))
         k, = jr.split(k, 1)
-        batch = []
+        batch, starts = [], []
         for uh in np.array(use_hist):
             pool = valid_hist if (bool(uh) and len(valid_hist) > 0) else valid_curr
             bi = int(jr.randint(k, (), 0, B)); k, = jr.split(k, 1)
             si = int(pool[int(jr.randint(k, (), 0, len(pool)))]); k, = jr.split(k, 1)
-            batch.append(Xfull[bi, si:si + seg_len, :])
-        yield jnp.asarray(np.stack(batch, axis=0))
+            seg = Xfull[bi, si:si + seg_len, :]
+            batch.append(seg); starts.append(si)
+        yield jnp.asarray(np.stack(batch, axis=0)), jnp.asarray(starts)
 
-def sequential_window_loader(Xfull: np.ndarray, seg_len: int, batch_size: int, stride: int):
-    B, T, _ = Xfull.shape; starts = compute_starts(T, seg_len, stride) or [0]
+def sequential_window_loader(
+    Xfull: np.ndarray,           # (B, T, 2)
+    seg_len: int,
+    batch_size: int,
+    stride: int
+) -> Iterator[Tuple[jnp.ndarray, jnp.ndarray]]:
+    B, T, _ = Xfull.shape
+    starts = compute_starts(T, seg_len, stride=stride) or [0]
     pairs = [(b, s) for s in starts for b in range(B)]
     idx = 0
     while True:
-        batch = []
+        batch, st = [], []
         for _ in range(batch_size):
             b, s = pairs[idx % len(pairs)]; idx += 1
-            batch.append(Xfull[b, s:s + seg_len, :])
-        yield jnp.asarray(np.stack(batch, axis=0))
+            batch.append(Xfull[b, s:s + seg_len, :]); st.append(s)
+        yield jnp.asarray(np.stack(batch, axis=0)), jnp.asarray(st)
 
 # -----------------------
 # Training
@@ -208,10 +230,11 @@ def train_one(
 ):
     # Data
     data = load_shape(shape, root=data_root)
-    pos_rs, _, t_rs = resample(data, nsamples=nsamples)
+    pos_rs, _, t_full_np = resample(data, nsamples=nsamples)
     ntrain = min(ntrain, len(pos_rs))
     Y_full = np.stack([pos_rs[i] for i in range(ntrain)], axis=0)  # (B,T,2)
     T_full = Y_full.shape[1]
+    t_full = jnp.asarray(t_full_np)  # global grid in [0,1]
 
     # Model/opt
     key = jr.PRNGKey(seed); mkey, lkey = jr.split(key, 2)
@@ -225,75 +248,108 @@ def train_one(
     out_dir = out_root / shape / run_id
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Bounds for viz
-    bounds = _make_bounds_from_trajs(Y_full)
-
-    # Loss/step
+    # Loss/step with per-sample time grids
     @eqx.filter_value_and_grad
-    def loss_fn(m, ti, Yi):
-        Y0 = Yi[:, 0, :]
-        pred = jax.vmap(m, in_axes=(None, 0))(ti, Y0)
+    def loss_fn(m, Ti_b, Yi):
+        # Ti_b: (Bseg, L) sliced from global t_full; Yi: (Bseg, L, 2)
+        Y0 = Yi[:, 0, :]                           # (Bseg, 2)
+        # vmap over samples: (L,) with (2,)
+        pred = jax.vmap(m, in_axes=(0, 0))(Ti_b, Y0)  # (Bseg, L, 2)
         return jnp.mean((pred - Yi) ** 2)
 
     @eqx.filter_jit
-    def train_step(m, opt_state, ti, Yi):
-        l, g = loss_fn(m, ti, Yi)
+    def train_step(m, opt_state, Ti_b, Yi):
+        l, g = loss_fn(m, Ti_b, Yi)
         updates, opt_state = optim.update(g, opt_state)
         m = eqx.apply_updates(m, updates)
         return l, m, opt_state
 
+    # Curriculum schedule (fractions → lengths; KEEP ORDER GIVEN)
     fracs = [float(s.strip()) for s in curriculum_fracs.split(",") if s.strip()]
     fracs = [max(0.05, min(1.0, f)) for f in fracs]
-    fracs = sorted(fracs)
 
     total_stages = len(fracs)
     step_count = 0
-    loss_hist = []
+    loss_hist: List[float] = []
     hist_starts: List[int] = []
     t0 = time.time()
 
     for si, frac in enumerate(fracs, start=1):
         seg_len = max(8, int(round(frac * T_full)))
-        ti = jnp.linspace(0.0, 1.0, seg_len)
         stage_steps = max(1, steps // total_stages) if si < total_stages else (steps - step_count)
 
         if window_mode == "sequential":
             stride = max(1, int(round(stride_frac * T_full)))
             loader = sequential_window_loader(Y_full, seg_len=seg_len, batch_size=batch_size, stride=stride)
+
             B = Y_full.shape[0]
             num_starts = max(1, len(compute_starts(T_full, seg_len, stride)))
             steps_per_epoch = int(np.ceil((B * num_starts) / batch_size))
             total_iters = steps_per_epoch * max(1, int(epochs_per_stage))
             iters = range(min(stage_steps, total_iters))
+
             for _ in iters:
-                Yi = next(loader); loss, model, opt_state = train_step(model, opt_state, ti, Yi)
+                Yi, starts = next(loader)                     # (Bsz,L,2), (Bsz,)
+                # per-sample time grid from the SAME global t_full (no renorm)
+                Ti_b = jnp.stack([t_full[s:s+seg_len] for s in starts], axis=0)  # (Bsz,L)
+                loss, model, opt_state = train_step(model, opt_state, Ti_b, Yi)
                 loss_hist.append(float(loss)); step_count += 1
+
                 if (step_count % print_every) == 0 or step_count == steps:
-                    print(f"[{shape}] stage {si}/{total_stages} frac={frac:.2f} | SEQ seg_len={seg_len} stride={stride} | step {step_count:06d}/{steps} | loss={float(loss):.6f}")
+                    print(f"[{shape}] stage {si}/{total_stages} frac={frac:.2f} "
+                          f"| SEQ seg_len={seg_len} stride={stride} "
+                          f"| step {step_count:06d}/{steps} | loss={float(loss):.6f}")
+
                 if (step_count % save_every) == 0 or step_count == steps:
-                    ref_seg = np.array(Y_full[0, :seg_len, :], dtype=float)
+                    s0 = 0
+                    ref_seg = np.array(Y_full[0, s0:s0+seg_len, :], dtype=float)
+                    ti = np.array(t_full_np[s0:s0+seg_len], dtype=float)
                     roll = np.array(model(ti, jnp.asarray(ref_seg[0])))
-                    _plot_xy_overlay(ref_seg, roll, out_dir / f"overlay_step{step_count}.png", f"{shape} — step {step_count} (seg_len={seg_len}, sequential)")
+                    _plot_xy_overlay(ref_seg, roll, out_dir / f"overlay_step{step_count}.png",
+                                     f"{shape} — step {step_count} (seg_len={seg_len}, sequential)")
+
                 if step_count >= steps: break
+
         else:
+            # Mixed (random + replay)
             curr_starts = compute_starts(T_full, seg_len, stride=max(1, int(round(overlap_frac * seg_len))))
+
             def alpha_at(k: int) -> float:
                 if stage_steps <= 1: return alpha_end
                 a = alpha_start + (alpha_end - alpha_start) * (k / (stage_steps - 1))
                 return float(max(0.0, min(1.0, a)))
+
             for k in range(stage_steps):
                 alpha = alpha_at(k)
-                Yi = next(mixed_window_loader(jnp.asarray(Y_full), seg_len, batch_size, lkey, hist_starts, curr_starts, alpha))
-                loss, model, opt_state = train_step(model, opt_state, ti, Yi)
+                Yi, starts = next(mixed_window_loader(
+                    Xfull=jnp.asarray(Y_full),
+                    seg_len=seg_len,
+                    batch_size=batch_size,
+                    key=lkey,
+                    hist_starts=hist_starts,
+                    curr_starts=curr_starts,
+                    alpha=alpha,
+                ))
+                Ti_b = jnp.stack([t_full[s:s+seg_len] for s in starts], axis=0)
+                loss, model, opt_state = train_step(model, opt_state, Ti_b, Yi)
                 loss_hist.append(float(loss)); step_count += 1
+
                 if (step_count % print_every) == 0 or step_count == steps:
-                    print(f"[{shape}] stage {si}/{total_stages} frac={frac:.2f} | MIX seg_len={seg_len} stride≈{int(overlap_frac*seg_len)} alpha={alpha:.2f} | step {step_count:06d}/{steps} | loss={float(loss):.6f}")
+                    print(f"[{shape}] stage {si}/{total_stages} frac={frac:.2f} "
+                          f"| MIX seg_len={seg_len} stride≈{int(overlap_frac*seg_len)} alpha={alpha:.2f} "
+                          f"| step {step_count:06d}/{steps} | loss={float(loss):.6f}")
+
                 if (step_count % save_every) == 0 or step_count == steps:
-                    s0 = (Y_full.shape[1] - seg_len) // 3 if seg_len < Y_full.shape[1] else 0
+                    s0 = (T_full - seg_len) // 3 if seg_len < T_full else 0
                     ref_seg = np.array(Y_full[0, s0:s0+seg_len, :], dtype=float)
+                    ti = np.array(t_full_np[s0:s0+seg_len], dtype=float)
                     roll = np.array(model(ti, jnp.asarray(ref_seg[0])))
-                    _plot_xy_overlay(ref_seg, roll, out_dir / f"overlay_step{step_count}.png", f"{shape} — step {step_count} (seg_len={seg_len}, mixed)")
+                    _plot_xy_overlay(ref_seg, roll, out_dir / f"overlay_step{step_count}.png",
+                                     f"{shape} — step {step_count} (seg_len={seg_len}, mixed)")
+
                 if step_count >= steps: break
+
+            # carry current starts into history
             hist_starts = sorted(set(hist_starts).union(curr_starts))
 
         if step_count >= steps: break
@@ -301,14 +357,19 @@ def train_one(
     dur = time.time() - t0
     print(f"[{shape}] Done in {dur:.1f}s | final loss={loss_hist[-1]:.6e}")
 
+    # save artifacts
+    out_dir.mkdir(parents=True, exist_ok=True)
     model_path = out_dir / f"{shape}_NODE_segcur.eqx"
     eqx.tree_serialise_leaves(str(model_path), model)
     _plot_loss_curve(loss_hist, out_dir / "loss_curve.png")
-    _plot_vector_field(model, _make_bounds_from_trajs(Y_full), out_dir / "vector_field.png", title=f"{shape} — learned vector field")
+    _plot_vector_field(model, _make_bounds_from_trajs(Y_full), out_dir / "vector_field.png",
+                       title=f"{shape} — learned vector field")
 
+    # qualitative: full-trajectory rollout from first point (global t_full)
     demo0 = np.array(Y_full[0], dtype=float)
-    roll_full = np.array(model(jnp.linspace(0.0, 1.0, demo0.shape[0]), jnp.asarray(demo0[0])))
-    _plot_xy_overlay(demo0, roll_full, out_dir / "overlay_full.png", f"{shape} — rollout from first point (full length)")
+    roll_full = np.array(model(np.array(t_full_np), jnp.asarray(demo0[0])))
+    _plot_xy_overlay(demo0, roll_full, out_dir / "overlay_full.png",
+                     f"{shape} — rollout from first point (full length)")
 
     meta = dict(shape=shape, nsamples=nsamples, ntrain=ntrain, seed=seed, width=width, depth=depth,
                 steps=steps, batch_size=batch_size, base_lr=base_lr, curriculum_fracs=fracs,
@@ -319,7 +380,7 @@ def train_one(
     return str(model_path)
 
 def parse_args():
-    p = argparse.ArgumentParser("Train NODE on IROS trajectories with segment curriculum.")
+    p = argparse.ArgumentParser("Train NODE on IROS trajectories with segment curriculum (global time slicing).")
     p.add_argument("--shape", type=str, default="IShape")
     p.add_argument("--data_root", type=str, default=DEFAULT_DATA_ROOT)
     p.add_argument("--out_root", type=str, default=DEFAULT_OUT_ROOT)
@@ -348,6 +409,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 

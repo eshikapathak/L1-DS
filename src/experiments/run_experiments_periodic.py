@@ -12,8 +12,8 @@ from models.neural_ode import NeuralODE
 from src.train.train_node_periodic import load_shape, resample
 from src.experiments.targets import TargetDTW
 from src.experiments.robust_ctrl import L1Adaptive
-from src.experiments.disturbances import big_mid_pulse, two_mid_pulses
-from src.experiments.simulator import SimConfig, simulate
+from src.experiments.disturbances_periodic import big_mid_pulse, two_mid_pulses
+from src.experiments.simulator_periodic import SimConfig, simulate
 from src.experiments.metrics_plots import dtw_distance, plot_all_together_with_dist, bar_with_ci
 
 def rollout_node_reference(model: NeuralODE, z0: np.ndarray, t_grid: np.ndarray):
@@ -41,8 +41,8 @@ def parse_args():
     ap.add_argument("--with_llc", action="store_true", help="Use plant/LLC path.")
     ap.add_argument("--matched", action="store_true")
     ap.add_argument("--unmatched", action="store_true")
-    ap.add_argument("--matched_type", type=str, default="sine", choices=["sine","pulse","const"])
-    ap.add_argument("--unmatched_type", type=str, default="sine", choices=["sine","pulse","const"])
+    ap.add_argument("--matched_type", type=str, default="sine", choices=["sine","pulse","const", "multisine", "chirp"])
+    ap.add_argument("--unmatched_type", type=str, default="sine", choices=["sine","pulse","const", "multisine", "chirp"])
 
     # Direct (no LLC):
     ap.add_argument("--no_llc_zero", action="store_true",
@@ -96,7 +96,7 @@ def main():
             dist_title = "Direct: zero disturbance"
             base_tag = "no_llc_zero"
         else:
-            d_fn = two_mid_pulses(0.3,0.20,0.0,(1.0,1.0), 0.7,0.20,0.0,(1.0,-1.0))
+            d_fn = two_mid_pulses(0.3,0.20,4.0,(1.0,1.0), 0.7,0.20,2.0,(1.0,-1.0))
             dist_title = "Direct: two pulses"
             base_tag = "no_llc_direct_two_pulses"
     else:
@@ -118,6 +118,7 @@ def main():
 
     cols=[]; names=[]; dtw_vals=[]; last_logs=None
     for name, flags, sel_factory in controllers:
+        print("Running ", name)
         cfg = SimConfig(
             dt=None, T=None, target_mode="dtw",
             no_llc=(not args.with_llc),
@@ -129,7 +130,7 @@ def main():
         logs = simulate(
             model, None, lambda: sel_factory(dt=float(1.0/(len(demo_t)-1))),
             cfg, init_state, order=1, direct_dist_fn=d_fn,
-            save_npz_path=str(out_dir / npz_name), t_grid=10*demo_t
+            save_npz_path=str(out_dir / npz_name), t_grid=demo_t
         )
         cols.append((logs["z"], name))
         names.append(name); dtw_vals.append(dtw_distance(logs["z"], demo_avg_pos))

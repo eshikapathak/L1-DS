@@ -40,7 +40,7 @@ def read_meta_for_dims(model_path: Path) -> tuple[int,int,int,int]:
     return 128, 3, 10000, 3
 
 def rollout(model: NeuralODE, y0_xy: np.ndarray, T: int) -> np.ndarray:
-    ts = jnp.linspace(0.0, 10.0, T)
+    ts = jnp.linspace(0.0, 1.0, T)
     ys = np.array(model(ts, jnp.asarray(y0_xy)))
     return ys  # (T,2)
 
