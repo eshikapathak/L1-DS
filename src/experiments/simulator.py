@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Callable, Optional, Tuple
 
 from .plant_llc import ContinuousDoubleIntegrator2D, PDLowLevel, PIDLowLevel
-from .disturbances import make_matched_fn, make_unmatched_fn
+from .disturbances_new import make_matched_fn, make_unmatched_fn
 from .robust_ctrl import clf_qp, L1Adaptive
 
 @dataclass

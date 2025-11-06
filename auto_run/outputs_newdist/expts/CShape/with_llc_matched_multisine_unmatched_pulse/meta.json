@@ -1,0 +1,34 @@
+{
+  "model": "auto_run/models/CShape/order1_w100_d3_ntr4_ns1000_curr200_lr0.0005_seed1385/CShape_NODE_w100_d3_ntr4_ns1000.eqx",
+  "order": 1,
+  "width": 100,
+  "depth": 3,
+  "train_yaml": "configs/CShape/node_train.yaml",
+  "shape": "CShape",
+  "nsamples": 1000,
+  "ntrain": 4,
+  "demo_ref": "NODE rollout from average-demo init",
+  "dtw_ref": "average of training demos",
+  "selector": "dtw",
+  "condition": {
+    "with_llc": true,
+    "disturbance_mode": "matched+unmatched",
+    "matched": true,
+    "unmatched": true,
+    "matched_type": "multisine",
+    "unmatched_type": "pulse"
+  },
+  "outputs": {
+    "fig": "auto_run/outputs_newdist/expts/CShape/with_llc_matched_multisine_unmatched_pulse/fig_CShape_with_llc_matched-multisine_unmatched-pulse_sel-dtw.png",
+    "chart": "auto_run/outputs_newdist/expts/CShape/with_llc_matched_multisine_unmatched_pulse/chart_CShape_with_llc_matched-multisine_unmatched-pulse_sel-dtw_dtw_avg.png",
+    "logs": [
+      "CShape_with_llc_matched-multisine_unmatched-pulse_sel-dtw_NODE.npz",
+      "CShape_with_llc_matched-multisine_unmatched-pulse_sel-dtw_NODE_CLF.npz",
+      "CShape_with_llc_matched-multisine_unmatched-pulse_sel-dtw_NODE_CLF_L1.npz"
+    ]
+  },
+  "references": {
+    "avg_demo": "auto_run/outputs_newdist/expts/CShape/with_llc_matched_multisine_unmatched_pulse/CShape_avg_demo.npz",
+    "node_ref": "auto_run/outputs_newdist/expts/CShape/with_llc_matched_multisine_unmatched_pulse/CShape_node_ref_from_avg_init.npz"
+  }
+}

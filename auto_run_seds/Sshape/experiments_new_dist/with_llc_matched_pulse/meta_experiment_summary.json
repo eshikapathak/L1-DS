@@ -1,0 +1,52 @@
+{
+  "model_info": {
+    "path": "auto_run_seds/Sshape/trained_model/Sshape_k8_trainResamp1000_model.pkl",
+    "seds_K": 8,
+    "seds_dim": 2
+  },
+  "data_info": {
+    "shape": "Sshape",
+    "nsamples": 1000,
+    "ntrain_avg": 4,
+    "global_target_pos": [
+      0.0,
+      0.0
+    ]
+  },
+  "reference_info": {
+    "comment": "References are stored in MODEL coordinates (target at origin)",
+    "avg_demo_npz": "Sshape_avg_demo_model_coords.npz",
+    "seds_ref_npz": "Sshape_seds_ref_model_coords.npz",
+    "dtw_reference": "average demo (model coords)",
+    "selector_reference": "SEDS rollout (model coords)"
+  },
+  "simulation_info": {
+    "selector_type": "dtw",
+    "condition_tag": "with_llc_matched-pulse",
+    "condition_details": {
+      "with_llc": true,
+      "disturbance_mode": "matched",
+      "matched": true,
+      "unmatched": false,
+      "matched_type": "pulse",
+      "unmatched_type": "sine"
+    },
+    "sim_dt_used": 0.01001001001001001,
+    "t_grid_duration": 10.0,
+    "num_steps": 999
+  },
+  "outputs": {
+    "figure": "fig_Sshape_with_llc_matched-pulse_sel-dtw.png",
+    "dtw_chart": "chart_Sshape_with_llc_matched-pulse_sel-dtw_dtw_avg.png",
+    "simulation_logs": [
+      "Sshape_with_llc_matched-pulse_sel-dtw_SEDS.npz",
+      "Sshape_with_llc_matched-pulse_sel-dtw_SEDS_CLF.npz",
+      "Sshape_with_llc_matched-pulse_sel-dtw_SEDS_CLF_L1.npz"
+    ]
+  },
+  "dtw_results": {
+    "SEDS": 5721.316653693005,
+    "SEDS+CLF": 5724.937520503584,
+    "SEDS+CLF+L1": 5784.38550337283
+  }
+}

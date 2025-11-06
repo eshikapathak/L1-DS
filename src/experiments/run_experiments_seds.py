@@ -202,8 +202,8 @@ def main():
                     help="Enable matched lower-level disturbance (acts on acceleration). Only used with --with_llc.")
     ap.add_argument("--unmatched", action="store_true",
                     help="Enable unmatched lower-level disturbance (acts on position rate). Only used with --with_llc.")
-    ap.add_argument("--matched_type", type=str, default="sine", choices=["sine","pulse","const"], help="Type of matched disturbance.")
-    ap.add_argument("--unmatched_type", type=str, default="sine", choices=["sine","pulse","const"], help="Type of unmatched disturbance.")
+    ap.add_argument("--matched_type", type=str, default="sine", choices=["sine","pulse","const", "multisine", "chirp"], help="Type of matched disturbance.")
+    ap.add_argument("--unmatched_type", type=str, default="sine", choices=["sine","pulse","const", "multisine", "chirp"], help="Type of unmatched disturbance.")
 
     args = ap.parse_args()
 

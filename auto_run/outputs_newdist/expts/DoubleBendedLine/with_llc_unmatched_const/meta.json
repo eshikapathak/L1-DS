@@ -1,0 +1,34 @@
+{
+  "model": "auto_run/models/DoubleBendedLine/order1_w100_d3_ntr4_ns1000_curr200_lr0.0005_seed1385/DoubleBendedLine_NODE_w100_d3_ntr4_ns1000.eqx",
+  "order": 1,
+  "width": 100,
+  "depth": 3,
+  "train_yaml": "configs/DoubleBendedLine/node_train.yaml",
+  "shape": "DoubleBendedLine",
+  "nsamples": 1000,
+  "ntrain": 4,
+  "demo_ref": "NODE rollout from average-demo init",
+  "dtw_ref": "average of training demos",
+  "selector": "dtw",
+  "condition": {
+    "with_llc": true,
+    "disturbance_mode": "unmatched",
+    "matched": false,
+    "unmatched": true,
+    "matched_type": "sine",
+    "unmatched_type": "const"
+  },
+  "outputs": {
+    "fig": "auto_run/outputs_newdist/expts/DoubleBendedLine/with_llc_unmatched_const/fig_DoubleBendedLine_with_llc_unmatched-const_sel-dtw.png",
+    "chart": "auto_run/outputs_newdist/expts/DoubleBendedLine/with_llc_unmatched_const/chart_DoubleBendedLine_with_llc_unmatched-const_sel-dtw_dtw_avg.png",
+    "logs": [
+      "DoubleBendedLine_with_llc_unmatched-const_sel-dtw_NODE.npz",
+      "DoubleBendedLine_with_llc_unmatched-const_sel-dtw_NODE_CLF.npz",
+      "DoubleBendedLine_with_llc_unmatched-const_sel-dtw_NODE_CLF_L1.npz"
+    ]
+  },
+  "references": {
+    "avg_demo": "auto_run/outputs_newdist/expts/DoubleBendedLine/with_llc_unmatched_const/DoubleBendedLine_avg_demo.npz",
+    "node_ref": "auto_run/outputs_newdist/expts/DoubleBendedLine/with_llc_unmatched_const/DoubleBendedLine_node_ref_from_avg_init.npz"
+  }
+}

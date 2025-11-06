@@ -16,10 +16,25 @@ import diffrax
 LASA_MODELS_ROOT = Path("auto_run/models")
 LASA_EXPTS_ROOT  = Path("auto_run/outputs/expts")
 
-IROS_ROOT        = Path("auto_run_iros/iros_outputs_auto_run_2")  # (as in your tree)
+IROS_ROOT        = Path("auto_run_iros/iros_outputs_auto_run_2")
 IROS_MODELS_ROOT = IROS_ROOT / "models_2"
 IROS_EXPTS_ROOT  = IROS_ROOT / "experiments_2"
 IROS_ROLLOUTS    = IROS_ROOT / "rollout_plots"
+
+# ===== Style =====
+# COLORS = {
+#     "TARGET": "#d62728",      # red
+#     "NODE":   "#1f77b4",      # blue
+#     "NODE+CLF": "#9467bd",    # purple
+#     "L1-NODE": "#2ca02c",     # green
+# }
+COLORS = {
+    "TARGET":  "#D55E00",   # red
+    "L1-NODE":  "#009E73",   # green
+    "NODE+CLF": "#E69F00",   # magenta
+    "NODE":    "#999999",   # GRAY
+}
+TARGET_LS = "--"             # dashed for target
 
 # ===== Minimal NODE (must match training arch) =====
 class Func(eqx.Module):
@@ -59,7 +74,6 @@ def _parse_wd_from_text(text: str) -> Tuple[int, int]:
     return int(mw.group(1)), int(md.group(1))
 
 def _newest_eqx_under(root: Path, shape: str) -> Path:
-    """Find newest *.eqx anywhere under root/shape/**."""
     globs = list((root / shape).rglob("*.eqx"))
     if not globs:
         raise FileNotFoundError(f"No .eqx files under {root/shape}")
@@ -67,12 +81,11 @@ def _newest_eqx_under(root: Path, shape: str) -> Path:
     return globs[0]
 
 def load_node_model(models_root: Path, shape: str) -> Tuple[NeuralODE, Path]:
-    """Find newest .eqx and parse w,d from filename (fallback: parent dir)."""
     eqx_path = _newest_eqx_under(models_root, shape)
     try:
         w, d = _parse_wd_from_text(eqx_path.name)
     except Exception:
-        w, d = _parse_wd_from_text(eqx_path.parent.name)  # fallback
+        w, d = _parse_wd_from_text(eqx_path.parent.name)
     key = jax.random.PRNGKey(0)
     template = NeuralODE(data_size=2, width_size=w, depth=d, key=key)
     model = eqx.tree_deserialise_leaves(str(eqx_path), template)
@@ -95,9 +108,11 @@ def compute_bounds(points: List[np.ndarray], pad_ratio: float = 0.12):
     Z = np.concatenate(points, axis=0) if len(points) > 1 else points[0]
     xmin, xmax = float(np.min(Z[:,0])), float(np.max(Z[:,0]))
     ymin, ymax = float(np.min(Z[:,1])), float(np.max(Z[:,1]))
-    rng = max(xmax - xmin, ymax - ymin, 1e-6)
-    pad = pad_ratio * rng
-    return (xmin - pad, xmax + pad), (ymin - pad, ymax + pad)
+    # make it square by expanding the smaller span
+    cx, cy = 0.5*(xmin+xmax), 0.5*(ymin+ymax)
+    half = 0.5*max(xmax-xmin, ymax-ymin, 1e-6)
+    half *= (1.0 + pad_ratio)
+    return (cx-half, cx+half), (cy-half, cy+half)
 
 def plot_vector_field(ax, model: NeuralODE, bounds):
     (xmin,xmax),(ymin,ymax) = bounds
@@ -108,9 +123,12 @@ def plot_vector_field(ax, model: NeuralODE, bounds):
             p = jnp.asarray([X[i,j], Y[i,j]])
             uv = np.array(model.func(0.0, p, None))
             U[i,j], V[i,j] = uv[0], uv[1]
-    ax.streamplot(X, Y, U, V, density=1.1, color="#cfcfcf", linewidth=0.7, arrowsize=0.8)
+    ax.streamplot(X, Y, U, V, density=1.1, color="#d9d9d9", linewidth=0.7, arrowsize=0.8)
+    ax.set_xlim(xmin, xmax); ax.set_ylim(ymin, ymax)
     ax.set_aspect("equal", adjustable="box")
     ax.grid(True, alpha=0.25)
+    # ticks ON
+    ax.tick_params(axis="both", which="both", labelsize=9)
 
 def rollout_ref_from_start(model: NeuralODE, start_xy: np.ndarray, T: int) -> np.ndarray:
     ts = jnp.linspace(0.0, 1.0, max(T, 2))
@@ -147,7 +165,8 @@ def add_panel_letter(ax, letter: str):
             ha="left", va="top", fontsize=12, fontweight="bold")
 
 def main():
-    fig, axes = plt.subplots(1, 5, figsize=(22, 4.2), constrained_layout=False)
+    # Wider figure but fixed height; each axes made square via limits/aspect.
+    fig, axes = plt.subplots(1, 5, figsize=(18, 3.6), constrained_layout=False)
     letters = ["a","b","c","d","e"]
 
     # === (a) LASA: CShape / no_llc_pulse ===
@@ -159,11 +178,11 @@ def main():
     ref_xy = rollout_ref_from_start(model, start_xy, T=logs["NODE"].shape[0])
     bounds = compute_bounds([logs["NODE"], logs["NODE+CLF"], logs["L1-NODE"], ref_xy])
     ax = axes[0]; plot_vector_field(ax, model, bounds)
-    ax.plot(ref_xy[:,0], ref_xy[:,1], lw=2.0, label="Target trajectory")
-    ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=2.0, label="NODE")
-    ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=2.0, label="NODE+CLF")
-    ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=2.0, label="L1-NODE")
-    ax.set_xticks([]); ax.set_yticks([]); add_panel_letter(ax, letters[0])
+    ax.plot(ref_xy[:,0], ref_xy[:,1], lw=2.0, ls=TARGET_LS, color=COLORS["TARGET"])
+    ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=1.5, color=COLORS["NODE"])
+    ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=2.0, color=COLORS["NODE+CLF"])
+    ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=2.8, color=COLORS["L1-NODE"])
+    add_panel_letter(ax, letters[0])
 
     # === (b) LASA: Snake / with_llc_unmatched_sine ===
     shape = "Snake"
@@ -173,11 +192,11 @@ def main():
     ref_xy = rollout_ref_from_start(model, np.asarray(logs["NODE"][0]), T=logs["NODE"].shape[0])
     bounds = compute_bounds([logs["NODE"], logs["NODE+CLF"], logs["L1-NODE"], ref_xy])
     ax = axes[1]; plot_vector_field(ax, model, bounds)
-    ax.plot(ref_xy[:,0], ref_xy[:,1], lw=2.0)
-    ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=2.0)
-    ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=2.0)
-    ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=2.0)
-    ax.set_xticks([]); ax.set_yticks([]); add_panel_letter(ax, letters[1])
+    ax.plot(ref_xy[:,0], ref_xy[:,1], lw=2.0, ls=TARGET_LS, color=COLORS["TARGET"])
+    ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=1.5, color=COLORS["NODE"])
+    ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=2.0, color=COLORS["NODE+CLF"])
+    ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=2.8, color=COLORS["L1-NODE"])
+    add_panel_letter(ax, letters[1])
 
     # === (c) LASA: Worm / with_llc_unmatched_const ===
     shape = "Worm"
@@ -187,29 +206,29 @@ def main():
     ref_xy = rollout_ref_from_start(model, np.asarray(logs["NODE"][0]), T=logs["NODE"].shape[0])
     bounds = compute_bounds([logs["NODE"], logs["NODE+CLF"], logs["L1-NODE"], ref_xy])
     ax = axes[2]; plot_vector_field(ax, model, bounds)
-    ax.plot(ref_xy[:,0], ref_xy[:,1], lw=2.0)
-    ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=2.0)
-    ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=2.0)
-    ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=2.0)
-    ax.set_xticks([]); ax.set_yticks([]); add_panel_letter(ax, letters[2])
+    ax.plot(ref_xy[:,0], ref_xy[:,1], lw=2.0, ls=TARGET_LS, color=COLORS["TARGET"])
+    ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=1.5, color=COLORS["NODE"])
+    ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=2.0, color=COLORS["NODE+CLF"])
+    ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=2.8, color=COLORS["L1-NODE"])
+    add_panel_letter(ax, letters[2])
 
     # === (d) IROS: OShape / with_llc_unmatched_pulse ===
-    shape = "OShape"
-    expt_dir = IROS_EXPTS_ROOT / shape / "with_llc_unmatched_pulse"
+    shape = "RShape"
+    expt_dir = IROS_EXPTS_ROOT / shape / "with_llc_unmatched_const"
     model, _ = load_node_model(IROS_MODELS_ROOT, shape)
     logs = load_three_logs(expt_dir)
     tgt_npz = IROS_ROLLOUTS / shape / f"{shape}_rollout_vs_training.npz"
     target_xy = robust_get_target_from_npz(tgt_npz) or logs["NODE"]
     bounds = compute_bounds([logs["NODE"], logs["NODE+CLF"], logs["L1-NODE"], target_xy])
     ax = axes[3]; plot_vector_field(ax, model, bounds)
-    ax.plot(target_xy[:,0], target_xy[:,1], lw=2.0)
-    ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=2.0)
-    ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=2.0)
-    ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=2.0)
-    ax.set_xticks([]); ax.set_yticks([]); add_panel_letter(ax, letters[3])
+    # ax.plot(target_xy[:,0], target_xy[:,1], lw=2.0, ls=TARGET_LS, color=COLORS["TARGET"])
+    ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=1.5, color=COLORS["NODE"])
+    ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=2.0, color=COLORS["NODE+CLF"])
+    ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=2.8, color=COLORS["L1-NODE"])
+    add_panel_letter(ax, letters[3])
 
     # === (e) IROS: SShape / with_llc_matched_multisine_unmatched_pulse ===
-    shape = "SShape"
+    shape = "IShape"
     expt_dir = IROS_EXPTS_ROOT / shape / "with_llc_matched_multisine_unmatched_pulse"
     model, _ = load_node_model(IROS_MODELS_ROOT, shape)
     logs = load_three_logs(expt_dir)
@@ -217,21 +236,25 @@ def main():
     target_xy = robust_get_target_from_npz(tgt_npz) or logs["NODE"]
     bounds = compute_bounds([logs["NODE"], logs["NODE+CLF"], logs["L1-NODE"], target_xy])
     ax = axes[4]; plot_vector_field(ax, model, bounds)
-    ax.plot(target_xy[:,0], target_xy[:,1], lw=2.0)
-    ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=2.0)
-    ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=2.0)
-    ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=2.0)
-    ax.set_xticks([]); ax.set_yticks([]); add_panel_letter(ax, letters[4])
+    # ax.plot(target_xy[:,0], target_xy[:,1], lw=2.0, ls=TARGET_LS, color=COLORS["TARGET"])
+    ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=1.5, color=COLORS["NODE"])
+    ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=2.0, color=COLORS["NODE+CLF"])
+    ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=2.8, color=COLORS["L1-NODE"])
+    add_panel_letter(ax, letters[4])
 
-    # Shared legend (top center)
-    labels = ["Target trajectory", "NODE", "NODE+CLF", "L1-NODE"]
-    handles = []
-    for lbl in labels:
-        (h,) = axes[0].plot([], [], lw=2.0, label=lbl)
-        handles.append(h)
-    fig = axes[0].figure
-    fig.legend(handles, labels, loc="upper center", ncol=4, frameon=True)
-    plt.subplots_adjust(left=0.02, right=0.98, bottom=0.06, top=0.88, wspace=0.08)
+    # Shared legend at bottom
+    # Build clean handles with desired styles (independent of plotted lines)
+    handles = [
+        plt.Line2D([0], [0], color=COLORS["TARGET"], lw=2.0, ls=TARGET_LS, label="Target trajectory"),
+        plt.Line2D([0], [0], color=COLORS["NODE"], lw=1.5, label="NODE"),
+        plt.Line2D([0], [0], color=COLORS["NODE+CLF"], lw=2.0, label="NODE+CLF"),
+        plt.Line2D([0], [0], color=COLORS["L1-NODE"], lw=2.8, label="L1-NODE"),
+    ]
+    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=True, fontsize=14,
+               bbox_to_anchor=(0.5, -0.01))
+
+    # Tighten layout but leave room for bottom legend
+    plt.subplots_adjust(left=0.03, right=0.99, top=0.98, bottom=0.18, wspace=0.10)
 
     out = Path("five_panel_lasa_iros.png")
     fig.savefig(out, dpi=300)

@@ -1,0 +1,14 @@
+{
+  "model": "/Users/eshikapathak/Documents/UIUC/Robust Task Performance F25/l1-node-nasa/auto_run_iros/iros_outputs_auto_run_2/models_2/SShape/segcur_w128_d3_ntr1_ns10000_lr0.0005_seed1234_mixed/SShape_NODE_segcur.eqx",
+  "shape": "SShape",
+  "nsamples": 10000,
+  "ntrain": 1,
+  "selector": "least_effort",
+  "with_llc": false,
+  "matched": false,
+  "unmatched": false,
+  "matched_type": "sine",
+  "unmatched_type": "sine",
+  "figure": "/Users/eshikapathak/Documents/UIUC/Robust Task Performance F25/l1-node-nasa/auto_run_iros/iros_outputs_auto_run_2/experiments_2_le/SShape/no_llc_pulses/fig_SShape_no_llc_direct_two_pulses_sel-le.png",
+  "chart": "/Users/eshikapathak/Documents/UIUC/Robust Task Performance F25/l1-node-nasa/auto_run_iros/iros_outputs_auto_run_2/experiments_2_le/SShape/no_llc_pulses/chart_SShape_no_llc_direct_two_pulses_sel-le_dtw_avg.png"
+}

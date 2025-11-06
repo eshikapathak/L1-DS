@@ -1,4 +1,4 @@
-# src/experiments/run_experiments.py
+# src/experiments/run_experiments.py -- this is for lasa
 from __future__ import annotations
 import argparse, json, time
 from pathlib import Path
@@ -10,7 +10,7 @@ from models.neural_ode import NeuralODE
 from src.data.lasa import load_shape, resample
 from .targets import TargetDTW, TargetLeastEffort
 from .robust_ctrl import L1Adaptive
-from .disturbances import big_mid_pulse, two_mid_pulses   # direct disturbance (no_llc only)
+from .disturbances_new import big_mid_pulse, two_mid_pulses   # direct disturbance (no_llc only)
 from .simulator import SimConfig, simulate
 from .metrics_plots import dtw_distance, plot_all_together_with_dist, bar_with_ci
 
@@ -130,8 +130,8 @@ def main():
                     help="Enable matched lower-level disturbance (acts on acceleration).")
     ap.add_argument("--unmatched", action="store_true",
                     help="Enable unmatched lower-level disturbance (acts on position rate).")
-    ap.add_argument("--matched_type", type=str, default="sine", choices=["sine","pulse","const"])
-    ap.add_argument("--unmatched_type", type=str, default="sine", choices=["sine","pulse","const"])
+    ap.add_argument("--matched_type", type=str, default="sine", choices=["sine","pulse","const", "chirp", "multisine"])
+    ap.add_argument("--unmatched_type", type=str, default="sine", choices=["sine","pulse","const", "chirp", "multisine"])
 
     args = ap.parse_args()
 

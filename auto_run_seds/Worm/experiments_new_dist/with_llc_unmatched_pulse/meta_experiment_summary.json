@@ -1,0 +1,52 @@
+{
+  "model_info": {
+    "path": "auto_run_seds/Worm/trained_model/Worm_k6_trainResamp1000_model.pkl",
+    "seds_K": 6,
+    "seds_dim": 2
+  },
+  "data_info": {
+    "shape": "Worm",
+    "nsamples": 1000,
+    "ntrain_avg": 4,
+    "global_target_pos": [
+      0.0,
+      0.0
+    ]
+  },
+  "reference_info": {
+    "comment": "References are stored in MODEL coordinates (target at origin)",
+    "avg_demo_npz": "Worm_avg_demo_model_coords.npz",
+    "seds_ref_npz": "Worm_seds_ref_model_coords.npz",
+    "dtw_reference": "average demo (model coords)",
+    "selector_reference": "SEDS rollout (model coords)"
+  },
+  "simulation_info": {
+    "selector_type": "dtw",
+    "condition_tag": "with_llc_unmatched-pulse",
+    "condition_details": {
+      "with_llc": true,
+      "disturbance_mode": "unmatched",
+      "matched": false,
+      "unmatched": true,
+      "matched_type": "sine",
+      "unmatched_type": "pulse"
+    },
+    "sim_dt_used": 0.01001001001001001,
+    "t_grid_duration": 10.0,
+    "num_steps": 999
+  },
+  "outputs": {
+    "figure": "fig_Worm_with_llc_unmatched-pulse_sel-dtw.png",
+    "dtw_chart": "chart_Worm_with_llc_unmatched-pulse_sel-dtw_dtw_avg.png",
+    "simulation_logs": [
+      "Worm_with_llc_unmatched-pulse_sel-dtw_SEDS.npz",
+      "Worm_with_llc_unmatched-pulse_sel-dtw_SEDS_CLF.npz",
+      "Worm_with_llc_unmatched-pulse_sel-dtw_SEDS_CLF_L1.npz"
+    ]
+  },
+  "dtw_results": {
+    "SEDS": 3280.791927704975,
+    "SEDS+CLF": 1282.085780922362,
+    "SEDS+CLF+L1": 715.7079519688887
+  }
+}
