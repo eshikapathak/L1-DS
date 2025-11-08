@@ -8,9 +8,9 @@ echo "[INFO] REPO_ROOT=$REPO_ROOT"
 echo "[INFO] PYTHONPATH=$PYTHONPATH"
 
 DATA_ROOT="IROS_dataset"
-OUT_ROOT="$REPO_ROOT/iros_outputs_auto_run_2"
+OUT_ROOT="$REPO_ROOT/iros_outputs_auto_run_2_high_freq_dist"
 MODELS_ROOT="$OUT_ROOT/models_2"
-EXPTS_ROOT="$OUT_ROOT/experiments_2_le"
+EXPTS_ROOT="$OUT_ROOT/experiments_2_DTW"
 
 mkdir -p "$MODELS_ROOT" "$EXPTS_ROOT"
 
@@ -86,24 +86,24 @@ for SH in "${SHAPES[@]}"; do
   mkdir -p "$SH_OUT"
 
   # ---------- helper: run both selectors ----------
+  # run_both_selectors () {
+  #   # $1... = the rest of args for python command (must include --out)
+  #   local outdir
+  #   # extract the directory after --out
+  #   for i in "$@"; do
+  #     if [[ "$prev" == "--out" ]]; then outdir="$i"; break; fi
+  #     prev="$i"
+  #   done
+  #   prev=""
+
+  #   echo "    [DTW]   -> ${outdir}"
+  #   python -m src.experiments.run_experiments_periodic "$@"
+
+  #   # echo "    [LEAST] -> ${outdir}_le"
+  #   # python -m src.experiments.run_experiments_periodic "$@" --selector least_effort #--out "${outdir}_le"
+  # }
+
   run_both_selectors () {
-    # $1... = the rest of args for python command (must include --out)
-    local outdir
-    # extract the directory after --out
-    for i in "$@"; do
-      if [[ "$prev" == "--out" ]]; then outdir="$i"; break; fi
-      prev="$i"
-    done
-    prev=""
-
-    # echo "    [DTW]   -> ${outdir}"
-    # python -m src.experiments.run_experiments_periodic "$@"
-
-    echo "    [LEAST] -> ${outdir}_le"
-    python -m src.experiments.run_experiments_periodic "$@" --selector least_effort #--out "${outdir}_le"
-  }
-
-  run_least_selector () {
   # Usage: run_least_selector <args...> (must include --out OUTDIR)
   local prev="" outdir=""
   for arg in "$@"; do
@@ -118,14 +118,17 @@ for SH in "${SHAPES[@]}"; do
   # set a distinct output dir (last --out wins)
   # if [[ -n "$outdir" ]]; then set -- "$@" --out "${outdir}_le"; fi
 
-  echo "    [LEAST] -> ${outdir}${outdir:+_le}"
-  python -m src.experiments.run_experiments_periodic "$@" --selector least_effort
+  echo "    [DTW]   -> ${outdir}"
+  python -m src.experiments.run_experiments_periodic "$@"
+
+  # echo "    [LEAST] -> ${outdir}${outdir:+_le}"
+  # python -m src.experiments.run_experiments_periodic "$@" --selector least_effort
 }
 
   echo ""
   echo "----- NO-LLC (DIRECT) (${SH}) -----"
   echo "[RUN] no_llc_pulses (direct two mid-pulses default)"
-  run_least_selector \
+  run_both_selectors \
     --shape "$SH" \
     --model "$MODEL_PATH" \
     --out "$SH_OUT/no_llc_pulses" \
@@ -133,9 +136,11 @@ for SH in "${SHAPES[@]}"; do
 
   echo ""
   echo "----- WITH-LLC (MATCHED ONLY) (${SH}) -----"
-  for KIND in const chirp multisine pulse; do
+  # for KIND in const chirp multisine pulse; do
+  for KIND in multisine; do
+
     echo "[RUN] with_llc | matched=${KIND}"
-    run_least_selector \
+    run_both_selectors \
       --shape "$SH" \
       --model "$MODEL_PATH" \
       --out "$SH_OUT/with_llc_matched_${KIND}" \
@@ -147,7 +152,7 @@ for SH in "${SHAPES[@]}"; do
   echo "----- WITH-LLC (UNMATCHED ONLY) (${SH}) -----"
   for KIND in const chirp multisine pulse; do
     echo "[RUN] with_llc | unmatched=${KIND}"
-    run_least_selector \
+    run_both_selectors \
       --shape "$SH" \
       --model "$MODEL_PATH" \
       --out "$SH_OUT/with_llc_unmatched_${KIND}" \
@@ -158,7 +163,7 @@ for SH in "${SHAPES[@]}"; do
   echo ""
   echo "----- WITH-LLC (COMBO) (${SH}) -----"
   echo "[RUN] with_llc | matched=multisine + unmatched=pulse"
-  run_least_selector \
+  run_both_selectors \
     --shape "$SH" \
     --model "$MODEL_PATH" \
     --out "$SH_OUT/with_llc_matched_multisine_unmatched_pulse" \

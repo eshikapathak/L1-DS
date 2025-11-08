@@ -32,8 +32,8 @@ run_both_selectors () {
   echo "    [DTW]   -> ${outdir}"
   python -m src.experiments.run_experiments_seds "$@"
 
-  echo "    [LEAST] -> ${outdir}_le"
-  python -m src.experiments.run_experiments_seds "$@" --selector least_effort --out "${outdir}_le"
+  # echo "    [LEAST] -> ${outdir}_le"
+  # python -m src.experiments.run_experiments_seds "$@" --selector least_effort --out "${outdir}_le"
 }
 
 # ==================== Main Loop ====================
@@ -48,7 +48,7 @@ for SH in "${SHAPES[@]}"; do
   # --- Directories ---
   SHAPE_OUT_ROOT="${AUTO_RUN_ROOT}/${SH}"
   MODEL_OUT_DIR="${SHAPE_OUT_ROOT}/trained_model"
-  EXPTS_OUT_BASE="${SHAPE_OUT_ROOT}/experiments_new_dist"
+  EXPTS_OUT_BASE="${SHAPE_OUT_ROOT}/experiments_new_dist_high_freq"
   mkdir -p "${MODEL_OUT_DIR}" "${EXPTS_OUT_BASE}"
 
   # --- Training ---
@@ -89,7 +89,9 @@ for SH in "${SHAPES[@]}"; do
   # ---------------- WITH-LLC: matched only ----------------
   echo ""
   echo "----- WITH-LLC (MATCHED ONLY) -----"
-  for KIND in const chirp multisine pulse; do
+  # for KIND in const chirp multisine pulse; do
+  for KIND in multisine; do
+
     echo "[RUN] with_llc | matched=${KIND}"
     run_both_selectors \
       "${BASE_EXPT_ARGS[@]}" \

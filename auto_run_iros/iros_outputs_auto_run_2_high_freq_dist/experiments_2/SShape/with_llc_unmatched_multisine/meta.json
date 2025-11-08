@@ -1,0 +1,14 @@
+{
+  "model": "/Users/eshikapathak/Documents/UIUC/Robust Task Performance F25/l1-node-nasa/auto_run_iros/iros_outputs_auto_run_2_high_freq_dist/models_2/SShape/segcur_w128_d3_ntr1_ns10000_lr0.0005_seed1234_mixed/SShape_NODE_segcur.eqx",
+  "shape": "SShape",
+  "nsamples": 10000,
+  "ntrain": 1,
+  "selector": "least_effort",
+  "with_llc": true,
+  "matched": false,
+  "unmatched": true,
+  "matched_type": "sine",
+  "unmatched_type": "multisine",
+  "figure": "/Users/eshikapathak/Documents/UIUC/Robust Task Performance F25/l1-node-nasa/auto_run_iros/iros_outputs_auto_run_2_high_freq_dist/experiments_2/SShape/with_llc_unmatched_multisine/fig_SShape_with_llc_unmatched-multisine_sel-le.png",
+  "chart": "/Users/eshikapathak/Documents/UIUC/Robust Task Performance F25/l1-node-nasa/auto_run_iros/iros_outputs_auto_run_2_high_freq_dist/experiments_2/SShape/with_llc_unmatched_multisine/chart_SShape_with_llc_unmatched-multisine_sel-le_dtw_avg.png"
+}

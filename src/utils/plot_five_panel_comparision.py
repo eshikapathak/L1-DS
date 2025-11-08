@@ -162,7 +162,7 @@ def load_three_logs(expt_dir: Path) -> Dict[str, np.ndarray]:
 
 def add_panel_letter(ax, letter: str):
     ax.text(0.02, 0.98, letter, transform=ax.transAxes,
-            ha="left", va="top", fontsize=12, fontweight="bold")
+            ha="left", va="top", fontsize=20, fontweight="bold")
 
 def main():
     # Wider figure but fixed height; each axes made square via limits/aspect.
@@ -250,7 +250,7 @@ def main():
         plt.Line2D([0], [0], color=COLORS["NODE+CLF"], lw=2.0, label="NODE+CLF"),
         plt.Line2D([0], [0], color=COLORS["L1-NODE"], lw=2.8, label="L1-NODE"),
     ]
-    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=True, fontsize=14,
+    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=True, fontsize=20,
                bbox_to_anchor=(0.5, -0.01))
 
     # Tighten layout but leave room for bottom legend

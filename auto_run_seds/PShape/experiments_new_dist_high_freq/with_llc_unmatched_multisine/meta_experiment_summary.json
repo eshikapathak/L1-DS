@@ -1,0 +1,52 @@
+{
+  "model_info": {
+    "path": "auto_run_seds/PShape/trained_model/PShape_k6_trainResamp1000_model.pkl",
+    "seds_K": 6,
+    "seds_dim": 2
+  },
+  "data_info": {
+    "shape": "PShape",
+    "nsamples": 1000,
+    "ntrain_avg": 4,
+    "global_target_pos": [
+      0.0,
+      0.0
+    ]
+  },
+  "reference_info": {
+    "comment": "References are stored in MODEL coordinates (target at origin)",
+    "avg_demo_npz": "PShape_avg_demo_model_coords.npz",
+    "seds_ref_npz": "PShape_seds_ref_model_coords.npz",
+    "dtw_reference": "average demo (model coords)",
+    "selector_reference": "SEDS rollout (model coords)"
+  },
+  "simulation_info": {
+    "selector_type": "dtw",
+    "condition_tag": "with_llc_unmatched-multisine",
+    "condition_details": {
+      "with_llc": true,
+      "disturbance_mode": "unmatched",
+      "matched": false,
+      "unmatched": true,
+      "matched_type": "sine",
+      "unmatched_type": "multisine"
+    },
+    "sim_dt_used": 0.01001001001001001,
+    "t_grid_duration": 10.0,
+    "num_steps": 999
+  },
+  "outputs": {
+    "figure": "fig_PShape_with_llc_unmatched-multisine_sel-dtw.png",
+    "dtw_chart": "chart_PShape_with_llc_unmatched-multisine_sel-dtw_dtw_avg.png",
+    "simulation_logs": [
+      "PShape_with_llc_unmatched-multisine_sel-dtw_SEDS.npz",
+      "PShape_with_llc_unmatched-multisine_sel-dtw_SEDS_CLF.npz",
+      "PShape_with_llc_unmatched-multisine_sel-dtw_SEDS_CLF_L1.npz"
+    ]
+  },
+  "dtw_results": {
+    "SEDS": 4096.120915942253,
+    "SEDS+CLF": 4350.811327534457,
+    "SEDS+CLF+L1": 4392.53134379499
+  }
+}

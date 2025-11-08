@@ -116,7 +116,7 @@ def _bandlimited_noise_vec_factory(mag=10.0, K=16, fmin=0.2, fmax=3.0,
 # with_llc disturbances (enter through plant)
 # -------------------------------
 # ---------- with_llc disturbances (enter through plant) ----------
-def make_matched_fn(on=True, kind="sine", MAG=10.0, FREQ=0.5, **kw):
+def make_matched_fn(on=True, kind="sine", MAG=10.0, FREQ=10.0, **kw):
     if not on: return constant_vec((0.0, 0.0))
     if kind == "const":      return constant_vec(kw.get("val", (0.2, -0.1)))
     if kind == "sine":       return lambda t: _sine_vec(t, MAG, FREQ,
@@ -132,19 +132,19 @@ def make_matched_fn(on=True, kind="sine", MAG=10.0, FREQ=0.5, **kw):
                                    ax_gain=kw.get("ax_gain",(0.6,0.9)))
     if kind == "multisine":  return _multisine_vec_factory(
                                    mag=kw.get("MAG", MAG), K=kw.get("K", 7),
-                                   fmin=kw.get("fmin", 0.15), fmax=kw.get("fmax", 2.0),
+                                   fmin=kw.get("fmin", 1.5), fmax=kw.get("fmax", 10.0),
                                    ax_gain=kw.get("ax_gain", (0.6,0.9)), seed=kw.get("seed", 123))
     if kind == "chirp":      return _chirp_vec_factory(
-                                   mag=kw.get("MAG", MAG), f0=kw.get("f0", 0.1), f1=kw.get("f1", 2.0),
+                                   mag=kw.get("MAG", MAG), f0=kw.get("f0", 1.0), f1=kw.get("f1", 10.0),
                                    T=kw.get("T", 8.0), ax_gain=kw.get("ax_gain",(0.6,0.9)),
                                    phase=kw.get("phase",(0.0,0.0)))
     if kind == "noise":      return _bandlimited_noise_vec_factory(
                                    mag=kw.get("MAG", MAG), K=kw.get("K", 16),
-                                   fmin=kw.get("fmin", 0.2), fmax=kw.get("fmax", 3.0),
+                                   fmin=kw.get("fmin", 1.0), fmax=kw.get("fmax", 10.0),
                                    ax_gain=kw.get("ax_gain",(0.7,0.7)), seed=kw.get("seed", 999))
     raise ValueError(f"Unknown matched kind: {kind}")
 
-def make_unmatched_fn(on=True, kind="sine", MAG=10.0, FREQ=0.5, **kw):
+def make_unmatched_fn(on=True, kind="sine", MAG=10.0, FREQ=10.0, **kw):
     if not on: return constant_vec((0.0, 0.0))
     if kind == "const":      return constant_vec(kw.get("val",(8.0, 6.0)))
     if kind == "sine":       return lambda t: _sine_vec(t, MAG, FREQ,
@@ -160,11 +160,11 @@ def make_unmatched_fn(on=True, kind="sine", MAG=10.0, FREQ=0.5, **kw):
                                    ax_gain=kw.get("ax_gain",(1.0,1.0)))
     if kind == "multisine":  return _multisine_vec_factory(
                                    mag=kw.get("MAG", MAG), K=kw.get("K", 11),
-                                   fmin=kw.get("fmin", 0.1), fmax=kw.get("fmax", 3.0),
+                                   fmin=kw.get("fmin", 1.0), fmax=kw.get("fmax", 10.0),
                                    ax_gain=kw.get("ax_gain", (1.0,1.0)), seed=kw.get("seed", 456))
     if kind == "chirp":      return _chirp_vec_factory(
-                                   mag=kw.get("MAG", MAG), f0=kw.get("f0", 0.05), f1=kw.get("f1", 3.0),
-                                   T=kw.get("T", 8.0), ax_gain=kw.get("ax_gain",(1.0,1.0)),
+                                   mag=kw.get("MAG", MAG), f0=kw.get("f0", 1.0), f1=kw.get("f1", 10.0),
+                                   T=kw.get("T", 1.0), ax_gain=kw.get("ax_gain",(1.0,1.0)),
                                    phase=kw.get("phase",(0.0,0.0)))
     if kind == "noise":      return _bandlimited_noise_vec_factory(
                                    mag=kw.get("MAG", MAG), K=kw.get("K", 24),
@@ -192,11 +192,11 @@ def make_direct_fn(on=True, kind="sine", MAG=0.8, FREQ=0.5, **kw):
                                    ax_gain=kw.get("ax_gain",(1.0,0.8)), seed=kw.get("seed", 314))
     if kind == "chirp":      return _chirp_vec_factory(
                                    mag=kw.get("MAG", MAG), f0=kw.get("f0", 0.08), f1=kw.get("f1", 2.2),
-                                   T=kw.get("T", 8.0), ax_gain=kw.get("ax_gain",(1.0,0.8)),
+                                   T=kw.get("T", 1.0), ax_gain=kw.get("ax_gain",(1.0,0.8)),
                                    phase=kw.get("phase",(0.0,0.0)))
     if kind == "noise":      return _bandlimited_noise_vec_factory(
                                    mag=kw.get("MAG", MAG), K=kw.get("K", 18),
-                                   fmin=kw.get("fmin", 0.15), fmax=kw.get("fmax", 3.0),
+                                   fmin=kw.get("fmin", 1.5), fmax=kw.get("fmax", 20.0),
                                    ax_gain=kw.get("ax_gain",(1.0,0.8)), seed=kw.get("seed", 2718))
     raise ValueError(f"Unknown direct kind: {kind}")
 

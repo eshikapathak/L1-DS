@@ -5,8 +5,23 @@ from pathlib import Path
 import csv
 import numpy as np
 
-# ---------- tiny helpers ----------
+# ---------- Optional fast DTW backends (multivariate-friendly) ----------
+_DTWFN = None
+try:
+    # fastdtw handles sequences of vectors; use Euclidean point distance.
+    from fastdtw import fastdtw
+    from scipy.spatial.distance import euclidean as _euclid
 
+    def _dtw_fast(X: np.ndarray, Y: np.ndarray) -> float:
+        # X, Y: (N,2), (M,2) -> fastdtw returns (dist, path)
+        dist, _ = fastdtw(X.tolist(), Y.tolist(), dist=_euclid)
+        return float(dist)
+    _DTWFN = _dtw_fast
+except Exception:
+    _DTWFN = None
+
+
+# ---------- tiny helpers ----------
 def load_npz(path: Path) -> dict:
     with np.load(path, allow_pickle=True) as d:
         return {k: d[k] for k in d.files}
@@ -20,18 +35,31 @@ def _pick_traj(d: dict) -> np.ndarray:
                 return arr[:, :2]
     raise KeyError("No trajectory-like array found in npz keys: " + ", ".join(d.keys()))
 
-def dtw_distance(X: np.ndarray, Y: np.ndarray) -> float:
+def _dtw_exact(X: np.ndarray, Y: np.ndarray) -> float:
     """Plain DTW with L2 point cost. Shapes: (N,2) and (M,2)."""
     N, M = len(X), len(Y)
     C = np.full((N+1, M+1), np.inf, dtype=float)
-    C[0,0] = 0.0
+    C[0, 0] = 0.0
     for i in range(1, N+1):
         xi = X[i-1]
         for j in range(1, M+1):
             yj = Y[j-1]
-            cost = np.linalg.norm(xi - yj)
-            C[i,j] = cost + min(C[i-1,j], C[i,j-1], C[i-1,j-1])
-    return float(C[N,M])
+            cost = float(np.linalg.norm(xi - yj))
+            C[i, j] = cost + min(C[i-1, j], C[i, j-1], C[i-1, j-1])
+    return float(C[N, M])
+
+def dtw_distance(X: np.ndarray, Y: np.ndarray) -> float:
+    """
+    Multivariate DTW distance between (N,2) and (M,2).
+    Tries a fast library first; falls back to exact DP if unavailable.
+    """
+    if _DTWFN is not None:
+        try:
+            return _DTWFN(X, Y)
+        except Exception:
+            # If the fast backend errors on a corner case, fall back gracefully.
+            pass
+    return _dtw_exact(X, Y)
 
 def find_ref_npz(expt_dir: Path) -> Path | None:
     """
@@ -39,11 +67,9 @@ def find_ref_npz(expt_dir: Path) -> Path | None:
       1) In this expt directory.
       2) In any sibling expt directory for this shape.
     """
-    # 1) Here
     here = list(expt_dir.glob("*node_ref_from_avg_init*.npz"))
     if here:
         return here[0]
-    # 2) Any sibling under shape
     for sib in expt_dir.parent.iterdir():
         if sib.is_dir():
             cand = list(sib.glob("*node_ref_from_avg_init*.npz"))
@@ -53,11 +79,10 @@ def find_ref_npz(expt_dir: Path) -> Path | None:
 
 def readable_dist_name(dirname: str) -> str:
     # Keep folder name as disturbance “type” for grouping
-    # e.g., "with_llc_unmatched_pulse", "with_llc_matched_multisine_unmatched_pulse", "no_llc_pulses"
     return dirname
 
-# ---------- main ----------
 
+# ---------- main ----------
 def compute(expts_root: Path, out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -77,7 +102,6 @@ def compute(expts_root: Path, out_dir: Path) -> None:
             l1_npz   = sorted(expt_dir.glob("*_NODE_CLF_L1.npz"))
 
             if not (node_npz and clf_npz and l1_npz):
-                # Skip if any is missing (quietly or print a note)
                 print(f"[WARN] Missing logs for {shape}/{dist}; skipping.")
                 continue
 
@@ -128,7 +152,6 @@ def compute(expts_root: Path, out_dir: Path) -> None:
     print(f"[OK] wrote {raw_csv}")
 
     # Aggregate (mean & variance across shapes) by disturbance
-    # Group rows by 'disturbance'
     from collections import defaultdict
     groups = defaultdict(list)
     for r in raw_rows:
@@ -137,9 +160,7 @@ def compute(expts_root: Path, out_dir: Path) -> None:
     summary_rows = []  # dist, mean/var for node, clf, l1 (normalized)
     for dist, rows in sorted(groups.items()):
         arr = np.array([[r[5], r[6], r[7]] for r in rows], dtype=float)  # norm columns
-        # means & (sample) variances
         means = np.mean(arr, axis=0)
-        # Use sample variance (ddof=1) if at least two samples, else 0
         vars_ = np.var(arr, axis=0, ddof=1) if arr.shape[0] >= 2 else np.zeros(3, dtype=float)
         summary_rows.append([
             dist,
@@ -175,9 +196,9 @@ def compute(expts_root: Path, out_dir: Path) -> None:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--expts_root", type=str, default="auto_run/outputs_newdist/expts",
+    ap.add_argument("--expts_root", type=str, default="auto_run/outputs_newdist_high_freq/expts",
                     help="Root folder containing per-shape experiment folders.")
-    ap.add_argument("--out_dir", type=str, default="auto_run/outputs_newdist/dtw_reports",
+    ap.add_argument("--out_dir", type=str, default="auto_run/outputs_newdist_high_fre/dtw_reports",
                     help="Where to write CSV/MD reports.")
     args = ap.parse_args()
 
@@ -188,5 +209,5 @@ if __name__ == "__main__":
     main()
 
 # python src/utils/compute_lasa_dtw_summary.py \
-#   --expts_root auto_run/outputs_newdist/expts \
-#   --out_dir auto_run/outputs_newdist/dtw_reports
+#   --expts_root auto_run/outputs_newdist_high_freq/expts \
+#   --out_dir auto_run/outputs_newdist_high_freq/dtw_reports
