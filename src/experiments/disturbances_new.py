@@ -132,7 +132,7 @@ def make_matched_fn(on=True, kind="sine", MAG=10.0, FREQ=10.0, **kw):
                                    ax_gain=kw.get("ax_gain",(0.6,0.9)))
     if kind == "multisine":  return _multisine_vec_factory(
                                    mag=kw.get("MAG", MAG), K=kw.get("K", 7),
-                                   fmin=kw.get("fmin", 1.5), fmax=kw.get("fmax", 10.0),
+                                   fmin=kw.get("fmin", 15), fmax=kw.get("fmax", 100.0),
                                    ax_gain=kw.get("ax_gain", (0.6,0.9)), seed=kw.get("seed", 123))
     if kind == "chirp":      return _chirp_vec_factory(
                                    mag=kw.get("MAG", MAG), f0=kw.get("f0", 1.0), f1=kw.get("f1", 10.0),

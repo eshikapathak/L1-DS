@@ -21,11 +21,11 @@ matplotlib.rcParams.update({
     "text.usetex": True,
     "pgf.rcfonts": False,
     # Font sizes
-    'font.size': 24, 
-    'axes.labelsize': 16,
-    'xtick.labelsize': 16,
-    'ytick.labelsize': 16,
-    'legend.fontsize': 24,
+    'font.size': 26, 
+    'axes.labelsize': 20,
+    'xtick.labelsize': 20,
+    'ytick.labelsize': 20,
+    'legend.fontsize': 26,
 })
 # Set unique line styles (LS) for differentiation
 LINE_STYLES = {
@@ -49,7 +49,7 @@ COLORS = {
     "TARGET": "#000000",   # Black/Darkest
     "L1-NODE": "#0072B2",   # Blue/Dark Green
     "NODE+CLF": "#D55E00",   # Orange/Yellowish
-    "NODE": "#666666",   # Darker Gray for better visibility
+    "NODE": "#666666", #"#CC79A7",  #"#666666",   # Darker Gray for better visibility
 }
 
 TARGET_LS = LINE_STYLES["TARGET"]
@@ -183,7 +183,7 @@ def load_three_logs(expt_dir: Path) -> Dict[str, np.ndarray]:
 def add_panel_letter(ax, letter: str):
     # Using \textbf{} ensures the text is rendered bold by LaTeX
     ax.text(-0.1, 1.1, f"\\textbf{{({letter})}}", transform=ax.transAxes,
-            ha="left", va="top", fontsize=24) # Keeping user's 0.95 and fontsize 22
+            ha="left", va="top", fontsize=26) # Keeping user's 0.95 and fontsize 22
 
 # ===== Main Plotting Logic =====
 def main():
@@ -195,7 +195,7 @@ def main():
     LW_TARGET = 3.0
     LW_L1_NODE = 3.5  # Thickest for best performance
     LW_NODE_CLF = 2.5
-    LW_NODE = 2.2     # Increased from 2.0 to 2.2 for better visibility
+    LW_NODE = 2.5     # Increased from 2.0 to 2.2 for better visibility
 
     # --- GOAL MARKER CONSTANTS ADDED ---
     GOAL_MARKER = '*'
@@ -218,9 +218,9 @@ def main():
     ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=LW_NODE,    ls=LINE_STYLES["NODE"],    color=COLORS["NODE"],    label="NODE")
     ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=LW_NODE_CLF, ls=LINE_STYLES["NODE+CLF"], color=COLORS["NODE+CLF"], label="NODE+CLF")
     ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=LW_L1_NODE, ls=LINE_STYLES["L1-NODE"], color=COLORS["L1-NODE"], label="L1-NODE")
-    ax.set_title(f"(a) LASA: {shape}", fontsize=24)
+    ax.set_title(f"(a)", fontsize=26)
     # add_panel_letter(ax, letters[0])
-    ax.set_ylabel("$x_2$", labelpad = -7) 
+    ax.set_ylabel("$x_2$", labelpad = 2) 
 
     # === (b) LASA: GShape / with_llc_unmatched_multisine ===
     shape = "GShape"
@@ -236,7 +236,7 @@ def main():
     ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=LW_NODE,    ls=LINE_STYLES["NODE"],    color=COLORS["NODE"])
     ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=LW_NODE_CLF, ls=LINE_STYLES["NODE+CLF"], color=COLORS["NODE+CLF"])
     ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=LW_L1_NODE, ls=LINE_STYLES["L1-NODE"], color=COLORS["L1-NODE"])
-    ax.set_title(f"(b) LASA: {shape}", fontsize=24)
+    ax.set_title(f"(b)", fontsize=26)
     # add_panel_letter(ax, letters[1])
     ax.set_ylabel("")
 
@@ -254,7 +254,7 @@ def main():
     ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=LW_NODE,    ls=LINE_STYLES["NODE"],    color=COLORS["NODE"])
     ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=LW_NODE_CLF, ls=LINE_STYLES["NODE+CLF"], color=COLORS["NODE+CLF"])
     ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=LW_L1_NODE, ls=LINE_STYLES["L1-NODE"], color=COLORS["L1-NODE"])
-    ax.set_title(f"(c) LASA: {shape}", fontsize=24)
+    ax.set_title(f"(c)", fontsize=26)
     # add_panel_letter(ax, letters[2])
     ax.set_ylabel("")
 
@@ -273,7 +273,7 @@ def main():
     ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=LW_NODE,    ls=LINE_STYLES["NODE"],    color=COLORS["NODE"])
     ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=LW_NODE_CLF, ls=LINE_STYLES["NODE+CLF"], color=COLORS["NODE+CLF"])
     ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=LW_L1_NODE, ls=LINE_STYLES["L1-NODE"], color=COLORS["L1-NODE"])
-    ax.set_title(f"(d) IROS: {shape}", fontsize=24)
+    ax.set_title(f"(d)", fontsize=26)
     # add_panel_letter(ax, letters[3])
     ax.set_ylabel("")
 
@@ -292,7 +292,7 @@ def main():
     ax.plot(logs["NODE"][:,0],     logs["NODE"][:,1],     lw=LW_NODE,    ls=LINE_STYLES["NODE"],    color=COLORS["NODE"])
     ax.plot(logs["NODE+CLF"][:,0], logs["NODE+CLF"][:,1], lw=LW_NODE_CLF, ls=LINE_STYLES["NODE+CLF"], color=COLORS["NODE+CLF"])
     ax.plot(logs["L1-NODE"][:,0],  logs["L1-NODE"][:,1],  lw=LW_L1_NODE, ls=LINE_STYLES["L1-NODE"], color=COLORS["L1-NODE"])
-    ax.set_title(f"(e) IROS: {shape}", fontsize=24)
+    ax.set_title(f"(e)", fontsize=26)
     # add_panel_letter(ax, letters[4])
     ax.set_ylabel("")
 
@@ -311,9 +311,9 @@ def main():
                bbox_to_anchor=(0.5, -0.06), borderaxespad=0.0)
 
     # Tighten layout: wspace set to a minimal positive value 0.02 (corrected from -0.4)
-    plt.subplots_adjust(left=0.02, right=0.99, top=0.92, bottom=0.2, wspace=-0.05)
+    plt.subplots_adjust(left=0.02, right=0.99, top=0.92, bottom=0.24, wspace=-0.1)
 
-    out = Path("five_panel_lasa_iros_close_v4.pdf")
+    out = Path("five_panel_lasa_iros_close_v4_nsn.pdf")
     # Use bbox_inches='tight' for robust output (avoids clipping)
     fig.savefig(out, dpi=300, bbox_inches='tight', pad_inches=0.05)
     print(f"[OK] wrote {out.resolve()}")
