@@ -29,7 +29,7 @@ Notes:
 - Edit the variables at the top of the shell script to change output/model paths before running.
 - **Important:** Ensure directory paths (`OUT_DIR`, `MODEL_DIR`, `DATA_DIR`, `RESULTS_DIR`, etc.) are correctly set for your system. Use absolute paths or verify relative paths resolve correctly from the repository root.
 - Run scripts from the repository root (`L1-DS`) so that relative paths inside scripts resolve correctly.
-- Activate your Python virtual environment first if scripts invoke Python modules.
+- Activate your Python virtual environment first.
 
 Run an auto-run shell script (example):
 
@@ -79,7 +79,7 @@ python src/experiments/metrics_plots.py
 - `auto_run_node_lasa/`, `auto_run_node_iros/`, `auto_run_seds_lasa/` — high-level shell scripts and example outputs. These orchestrate the experiment flow (prepare data, train models, run rollouts, generate plots).
 - `disturbances_visualised/` — pre-rendered disturbance previews.
 - `figures/` — generated figures.
-- `models/` — model implementations and classical SEDS helpers.
+- `models/` — model implementations and SEDS helpers.
 
 ### `models/`
 
@@ -91,11 +91,11 @@ python src/experiments/metrics_plots.py
 
 This is the main code for experiments, training entrypoints, dataset loaders and utilities.
 
-- `src/__init__.py` — package marker.
+- `src/__init__.py` - package marker.
 
 - `src/data/`
   - `lasa.py` — loader and preprocessing utilities for the LASA dataset; provides trajectories and helper functions used by training and evaluation.
-  - `IROS_dataset/` — utilities for handling the IROS dataset (if present).
+  - `IROS_dataset/` — utilities for handling the IROS dataset.
 
 - `src/experiments/` — orchestrates evaluation: runs simulators, collects disturbances, computes metrics. The main flow is:
 
@@ -154,7 +154,7 @@ When you run `run_experiments_lasa.py` (or IROS/SEDS), the simulator will apply 
 - Use `bash -n script.sh` to check shell syntax without running.
 - If imports fail, ensure virtual environment is active and `requirements.txt` dependencies are installed.
 - Ensure your directories are correctly specified.
-- If `run_experiments_*.py` produces unexpected results, check that disturbances are being applied correctly by inspecting the printed logs and the generated plots in `figures/` or `OUT_DIR`. 
+- If `run_experiments_*.py` produces unexpected results, check that disturbances are being applied correctly by inspecting the printed logs and the generated plots. 
 ---
 
 
