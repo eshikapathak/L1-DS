@@ -97,7 +97,7 @@ This is the main code for experiments, training entrypoints, dataset loaders and
   - `lasa.py` — loader and preprocessing utilities for the LASA dataset; provides trajectories and helper functions used by training and evaluation.
   - `IROS_dataset/` — utilities for handling the IROS dataset.
 
-- `src/experiments/` — orchestrates evaluation: runs simulators, collects disturbances, computes metrics. The main flow is:
+- `src/experiments/` — orchestrates evaluation: runs simulators, computes metrics. The main flow is:
 
   - **Flow:** `run_experiments_*.py` → calls `simulator_*.py` → which calls `disturbances_*.py` → produces rollouts → `metrics_plots.py` computes DTW/errors and plots.
 
