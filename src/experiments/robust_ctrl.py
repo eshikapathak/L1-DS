@@ -24,7 +24,7 @@ def clf_qp(x, x_ref, f_x, f_ref, alpha_h=15.0, lambda_v=10.0):
 
 class L1Adaptive:
     """Discrete-time L1 compensator working on v-domain (velocity)."""
-    def __init__(self, Ts, a=10.0, omega=12.0, x0=None):
+    def __init__(self, Ts, a=10.0, omega=30.0, x0=None):
         As = -a*np.eye(2); Kf = omega*np.eye(2)
         self.As, self.Ts, self.Kf = As, Ts, Kf
         self.expAsTs = expm(As*Ts)

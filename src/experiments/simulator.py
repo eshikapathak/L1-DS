@@ -89,14 +89,19 @@ def simulate(model,
     # PID gains from cfg; adjust as needed for higher inner rate
     low = PIDLowLevel(Kp=cfg.Kp, Kd=cfg.Kd, Ki=cfg.Ki, i_clamp=2.0, u_limit=None)
 
-    sigma_fn = make_matched_fn(cfg.matched, cfg.matched_type)
-    dp_fn    = make_unmatched_fn(cfg.unmatched, cfg.unmatched_type)
+    M_MULTI_KW = dict(MAG=10.0, fmin=2.0, fmax=9.0)
+    U_MULTI_KW = dict(MAG=10.0, fmin=2.0, fmax=9.0)
+
+    sigma_fn = make_matched_fn(cfg.matched, cfg.matched_type, **M_MULTI_KW)
+    dp_fn    = make_unmatched_fn(cfg.unmatched, cfg.unmatched_type, **U_MULTI_KW)
 
     s = init_state.astype(float)  # [px,py,vx,vy]
 
     Z=[]; V=[]; Zref=[]; Vref_true=[]; Vhat=[]; Vnom=[]; Va=[]; Vref_cmd=[]; Tvec=[]
     Ddir=[]        # <-- NEW: log direct disturbance (for plotting)
     hist=[]
+
+    
 
     selector = get_selector()
     if getattr(cfg, "use_l1", False) and not hasattr(selector, "l1"):

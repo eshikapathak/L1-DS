@@ -32,7 +32,7 @@ for SH in "${SHAPES[@]}"; do
   echo "======================================================="
 
   CFG="configs/${SH}/node_train.yaml"
-  OUTDIR="auto_run/outputs_newdist_high_freq/expts/${SH}"
+  OUTDIR="auto_run/outputs_newdist_high_freq_9/expts/${SH}"
   mkdir -p "${OUTDIR}"
 
   # echo "[TRAIN] ${SH}"

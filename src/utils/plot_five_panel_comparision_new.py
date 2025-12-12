@@ -313,7 +313,7 @@ def main():
     # Tighten layout: wspace set to a minimal positive value 0.02 (corrected from -0.4)
     plt.subplots_adjust(left=0.02, right=0.99, top=0.92, bottom=0.2, wspace=-0.05)
 
-    out = Path("five_panel_lasa_iros_close_v4.pdf")
+    out = Path("five_panel_lasa_iros_close_v4.png")
     # Use bbox_inches='tight' for robust output (avoids clipping)
     fig.savefig(out, dpi=300, bbox_inches='tight', pad_inches=0.05)
     print(f"[OK] wrote {out.resolve()}")
