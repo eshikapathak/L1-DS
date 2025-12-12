@@ -3,7 +3,7 @@
 
 **Paper reference:** This code implements experiments from the paper: ["A Robust Task-Level Control Architecture for Learned Dynamical Systems"](https://arxiv.org/pdf/2511.09790). For additional context, methodology, and results, please refer to the paper.
 
-This folder holds code, scripts and assets used to train and evaluate task-level dynamical systems models (neural ODEs, SEDS, etc.) on datasets such as LASA and IROS.
+This folder holds code and scripts used to train and evaluate task-level dynamical systems models (neural ODEs, SEDS, etc.) on datasets such as LASA and IROS.
 
 ## Setup
 
