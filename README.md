@@ -121,13 +121,11 @@ This is the main code for experiments, training entrypoints, dataset loaders and
   - `seed.py` — RNG seeding helper to produce reproducible runs.
   - `plot_all_disturbances.py`, `plot_five_panel_comparision.py` — higher-level plotting scripts used by the paper/report.
 
-If you need an exact description for a specific file, open it and I can add a one-line summary here.
-
 ## Customizing disturbances
 
 To change which disturbances are applied during evaluation:
 
-1. Open `src/experiments/disturbances_lasa.py` or `src/experiments/disturbances_iros.py` depending on your dataset.
+1. Open `src/experiments/disturbances_lasa.py` or `src/experiments/disturbances_iros.py` depending on the dataset.
 2. Look for functions like `step_disturbance()`, `sine_disturbance()`, `noise_disturbance()`, etc., or add your own.
 3. Modify the amplitude, frequency, or shape of disturbances in those functions.
 4. Edit the corresponding `run_experiments_*.py` to call or select different disturbance types when invoking the simulator.
