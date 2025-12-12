@@ -5,21 +5,18 @@
 
 This folder holds code, scripts and assets used to train and evaluate task-level dynamical systems models (neural ODEs, SEDS, etc.) on datasets such as LASA and IROS.
 
-## Quickstart
+## Setup
 
-1. Create and activate a virtual environment (recommended):
+Create and activate a virtual environment (recommended), and install dependencies:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-```
-
-2. Install dependencies:
-
-```bash
 pip install -r requirements.txt
 ```
+## Reproducing Experiments
 
+### 1. Auto-Run Scripts (Recommended)
 Shell-script flow: The `auto_run_*` shell scripts (for example `auto_run_node_lasa/auto_run_node_lasa.sh` and `auto_run_node_iros/auto_run_node_iros.sh`) implement the end-to-end workflow for training, evaluation, and plotting. Use these scripts when you want to reproduce full experiments. Common variables you may change inside those scripts:
 
 - `OUT_DIR` / `RESULTS_DIR` — top-level folder for saved outputs and plots
@@ -34,20 +31,7 @@ Notes:
 - Run scripts from the repository root (`l1-task-level-DS`) so that relative paths inside scripts resolve correctly.
 - Activate your Python virtual environment first if scripts invoke Python modules.
 
-3. Run training directly (example):
-
-```bash
-python src/train/train_node_lasa.py
-```
-
-4. Run experiments / plotting directly (example):
-
-```bash
-python src/experiments/run_experiments_lasa.py
-python src/experiments/metrics_plots.py
-```
-
-5. Run an auto-run shell script (example):
+Run an auto-run shell script (example):
 
 Make executable (once):
 
@@ -72,6 +56,21 @@ To preview what a script will do without executing heavy steps, open it in an ed
 ```bash
 bash -n ./auto_run_node_lasa/auto_run_node_lasa.sh
 sed -n '1,200p' ./auto_run_node_lasa/auto_run_node_lasa.sh
+```
+
+### 2. Manual Execution
+
+3. Run training directly (example):
+
+```bash
+python src/train/train_node_lasa.py
+```
+
+4. Run experiments / plotting directly (example):
+
+```bash
+python src/experiments/run_experiments_lasa.py
+python src/experiments/metrics_plots.py
 ```
 
 ## Repository layout
