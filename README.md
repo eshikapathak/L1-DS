@@ -2,6 +2,7 @@
 # L1-DS
 
 **Paper reference:** This code implements experiments from the paper: ["A Robust Task-Level Control Architecture for Learned Dynamical Systems"](https://arxiv.org/pdf/2511.09790). For additional context, methodology, and results, please refer to the paper.
+
 ![Five-panel comparison: LASA and IROS results](figures/five_panel_lasa_iros_close_v4.png)
 
 This repository holds code and scripts used to train and evaluate task-level dynamical systems models (neural ODEs, SEDS, etc.) on datasets such as LASA and IROS.
