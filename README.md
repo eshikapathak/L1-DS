@@ -74,7 +74,7 @@ bash -n ./auto_run_node_lasa/auto_run_node_lasa.sh
 sed -n '1,200p' ./auto_run_node_lasa/auto_run_node_lasa.sh
 ```
 
-## Repository layout (detailed)
+## Repository layout
 
 - `requirements.txt` — Python dependencies used by training and experiment scripts.
 - `auto_run_node_lasa/`, `auto_run_node_iros/`, `auto_run_seds_lasa/` — high-level shell scripts and example outputs. These orchestrate the experiment flow (prepare data, train models, run rollouts, generate plots).
@@ -88,7 +88,7 @@ sed -n '1,200p' ./auto_run_node_lasa/auto_run_node_lasa.sh
 - `neural_ode2.py` — alternative neural ODE architectures.
 - `SEDS/` — SEDS implementation, training utilities and LASA helpers (e.g., `seds_core.py`, `seds_train.py`, `lasa_data.py`).
 
-### `src/` (detailed)
+### `src/` 
 
 This is the main code for experiments, training entrypoints, dataset loaders and utilities.
 
