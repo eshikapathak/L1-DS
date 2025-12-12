@@ -20,7 +20,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Shell-script flow: The `auto_run_*` shell scripts (for example `auto_run_node_lasa/auto_run_node_lasa.sh` and `auto_run_node_iros/auto_run_node_iros.sh`) implement the end-to-end workflow for setup, training, evaluation, and plotting. Use these scripts when you want to reproduce full experiments quickly. Common variables you may change inside those scripts:
+Shell-script flow: The `auto_run_*` shell scripts (for example `auto_run_node_lasa/auto_run_node_lasa.sh` and `auto_run_node_iros/auto_run_node_iros.sh`) implement the end-to-end workflow for training, evaluation, and plotting. Use these scripts when you want to reproduce full experiments. Common variables you may change inside those scripts:
 
 - `OUT_DIR` / `RESULTS_DIR` — top-level folder for saved outputs and plots
 - `MODEL_DIR` — where trained checkpoints are written/read
