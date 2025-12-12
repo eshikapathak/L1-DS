@@ -60,13 +60,13 @@ sed -n '1,200p' ./auto_run_node_lasa/auto_run_node_lasa.sh
 
 ### 2. Manual Execution
 
-3. Run training directly (example):
+3. Run training directly (example) with default params (see the python file / shell scripts for the various custom command line interface input argument options):
 
 ```bash
 python src/train/train_node_lasa.py
 ```
 
-4. Run experiments / plotting directly (example):
+4. Run experiments / plotting directly (example) with default settings (see the python file / shell scripts for the various custom command line interface input argument options):
 
 ```bash
 python src/experiments/run_experiments_lasa.py
