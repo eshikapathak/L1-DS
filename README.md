@@ -28,7 +28,7 @@ Notes:
 
 - Edit the variables at the top of the shell script to change output/model paths before running.
 - **Important:** Ensure directory paths (`OUT_DIR`, `MODEL_DIR`, `DATA_DIR`, `RESULTS_DIR`, etc.) are correctly set for your system. Use absolute paths or verify relative paths resolve correctly from the repository root.
-- Run scripts from the repository root (`l1-task-level-DS`) so that relative paths inside scripts resolve correctly.
+- Run scripts from the repository root (`L1-DS`) so that relative paths inside scripts resolve correctly.
 - Activate your Python virtual environment first if scripts invoke Python modules.
 
 Run an auto-run shell script (example):
