@@ -1,7 +1,7 @@
 h5py
 typing-extensions
 git+https://github.com/justagist/pylasadataset
-jax==0.4.30
+jax
 jaxlib
 equinox
 diffrax

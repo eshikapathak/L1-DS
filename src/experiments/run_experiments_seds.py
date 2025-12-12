@@ -14,7 +14,7 @@ if str(_ROOT_DIR) not in sys.path:
 # --- End Path Hack ---
 
 try:
-    from SEDS.seds_core import SEDS
+    from models.SEDS.seds_core import SEDS
 except ImportError as e:
     print(f"Error: {e}. Could not import SEDS.")
     print("Please ensure SEDS/seds_core.py exists and the project root is in PYTHONPATH.")
@@ -23,9 +23,8 @@ except ImportError as e:
 from src.data.lasa import load_shape, resample
 from src.experiments.targets import TargetDTW, TargetLeastEffort
 from src.experiments.robust_ctrl import L1Adaptive
-from src.experiments.disturbances import big_mid_pulse, two_mid_pulses # direct disturbance (no_llc only)
-# IMPORTANT: Assumes simulate function exists and works as expected from the provided file
-from src.experiments.simulator import SimConfig, simulate
+from src.experiments.disturbances_lasa import big_mid_pulse, two_mid_pulses # direct disturbance (no_llc only)
+from src.experiments.simulator_lasa import SimConfig, simulate
 from src.experiments.metrics_plots import dtw_distance, plot_all_together_with_dist, bar_with_ci
 
 

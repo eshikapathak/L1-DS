@@ -7,9 +7,8 @@ import matplotlib.pyplot as plt
 import jax, jax.numpy as jnp
 import equinox as eqx
 
-# Use your project modules
 from models.neural_ode import NeuralODE
-from src.train.train_node_periodic import load_shape, resample
+from src.train.train_node_iros import load_shape, resample
 
 def latest_model_path(models_root: Path, shape: str) -> Path:
     shape_dir = models_root / shape

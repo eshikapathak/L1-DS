@@ -580,17 +580,17 @@ if __name__ == "__main__":
 #   --print_every 200 \
 #   --save_every 5000
 
-python src/periodic/train_node_periodic_epoch_windows.py \
-  --shape IShape \
-  --data_root IROS_dataset \
-  --out_root outputs_periodic/new_training \
-  --nsamples 10000 \
-  --ntrain 3 \
-  --window_mode sequential \
-  --curriculum_fracs "0.10,0.20,0.35,0.55,0.75,1.00" \
-  --stride_frac 0.10 \
-  --epochs_per_stage 3 \
-  --batch_size 16 \
-  --steps 150000 \
-  --print_every 200 \
-  --save_every 5000
+# python src/periodic/train_node_periodic_epoch_windows.py \
+#   --shape IShape \
+#   --data_root IROS_dataset \
+#   --out_root outputs_periodic/new_training \
+#   --nsamples 10000 \
+#   --ntrain 3 \
+#   --window_mode sequential \
+#   --curriculum_fracs "0.10,0.20,0.35,0.55,0.75,1.00" \
+#   --stride_frac 0.10 \
+#   --epochs_per_stage 3 \
+#   --batch_size 16 \
+#   --steps 150000 \
+#   --print_every 200 \
+#   --save_every 5000
